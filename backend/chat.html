@@ -344,7 +344,7 @@ renameConfirm.onclick=async()=>{
 async function completeAutoJoin(r){CHAT_USER=r.username;TOKEN='';MY_ID=Number(r.id||0);IDENTITY_EXPIRES=Number(r.identityExpires||0);saveIdentity(IDENTITY_EXPIRES);setJoined(r);const b=await api('/api/blocks');blocks=new Set(b.users||[]);await selectForum();await refreshOnline();await refreshUnread();if(!onlinePoll)onlinePoll=setInterval(refreshOnline,4000);startRealtime();startRewardTicker();}
 (async function start(){
   // Primary path: restore the secure HttpOnly FamilyHub session.
-  try{const s=await api('/api/session');if(s&&s.authenticated){await completeAutoJoin(s);return}}catch(e){}
+  try{loadIdentity();const s=await api('/api/session');if(s&&s.authenticated){await completeAutoJoin(s);return}}catch(e){}
   // Secondary path: the browser/device may still be bound for 21 days.
   // The binding is never itself a credential; /api/join establishes a fresh
   // secure session cookie after confirming the bound device.
