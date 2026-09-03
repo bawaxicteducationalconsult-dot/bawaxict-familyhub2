@@ -862,7 +862,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             with db_lock:
                 con=db(); device=con.execute('SELECT * FROM users WHERE client_id=?',(client_id,)).fetchone()
                 if device and device['identity_expires']>now:
-                    con.execute('UPDATE users SET last_seen=? WHERE id=?',(now,device['id'])); con.commit(); out={'ok':True,'id':device['id'],'username':device['username'],'hidden':bool(device['hidden']),'identityExpires':device['identity_expires'],'returning':True}; cookie='fh_session=%s; Max-Age=%d; Path=/; HttpOnly; Secure; SameSite=Lax' % (device['session_token'], max(0, device['identity_expires']-now)); con.close(); send_json(self,out,extra_headers=[('Set-Cookie',cookie)]);return
+                    con.execute('UPDATE users SET last_seen=? WHERE id=?',(now,device['id'])); con.commit(); out={'ok':True,'id':device['id'],'username':device['username'],'hidden':bool(device['hidden']),'identityExpires':device['identity_expires'],'returning':True}; cookie='fh_session=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=Lax' % (device['session_token'], max(0, device['identity_expires']-now)); con.close(); send_json(self,out,extra_headers=[('Set-Cookie',cookie)]);return
                 row=con.execute('SELECT id FROM users WHERE lower(username)=lower(?)', (username,)).fetchone()
                 if row and (not device or row['id']!=device['id']):con.close();send_json(self,{'error':'That username is already in use. Please choose another name.'},409);return
                 token=secrets.token_urlsafe(32); exp=now+IDENTITY_DAYS*86400
@@ -871,7 +871,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     uid=device['id']
                 else:
                     con.execute('INSERT INTO users(username,client_id,session_token,identity_expires,last_seen,username_changed_at,username_change_available_at) VALUES(?,?,?,?,?,?,?)',(username,client_id,token,exp,now,now,now+IDENTITY_DAYS*86400)); uid=con.execute('SELECT last_insert_rowid()').fetchone()[0]
-                con.commit();con.close(); cookie='fh_session=%s; Max-Age=%d; Path=/; HttpOnly; Secure; SameSite=Lax' % (token, IDENTITY_DAYS*86400); send_json(self,{'ok':True,'id':uid,'username':username,'hidden':False,'identityExpires':exp,'returning':False},extra_headers=[('Set-Cookie',cookie)]);return
+                con.commit();con.close(); cookie='fh_session=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=Lax' % (token, IDENTITY_DAYS*86400); send_json(self,{'ok':True,'id':uid,'username':username,'hidden':False,'identityExpires':exp,'returning':False},extra_headers=[('Set-Cookie',cookie)]);return
         if path=='/api/report':
             # Open endpoint: works both for a logged-in chat user reporting a
             # message/member, and for a hotspot visitor (not in chat at all)
@@ -1025,7 +1025,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if token:
                 with db_lock:
                     con=db(); con.execute('UPDATE users SET session_token=?, last_seen=? WHERE session_token=?',(secrets.token_urlsafe(32),int(time.time()),token)); con.commit(); con.close()
-            send_json(self,{'ok':True},extra_headers=[('Set-Cookie','fh_session=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax')]); return
+            send_json(self,{'ok':True},extra_headers=[('Set-Cookie','fh_session=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax')]); return
         if path=='/api/media/upload':
             token=request_session_token(self)
             con=db(); user=con.execute('SELECT * FROM users WHERE session_token=? AND identity_expires>?',(token,int(time.time()))).fetchone() if token else None
