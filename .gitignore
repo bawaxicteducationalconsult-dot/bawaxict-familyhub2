@@ -1,0 +1,8 @@
+backend/__pycache__/
+backend/*.db
+backend/*.bak*
+backend/*.before-*
+backend/*.backup-*
+backend/patch_*.py
+backend/server.log
+site/*.before-*
