@@ -8,6 +8,7 @@ import time
 import urllib.parse
 import urllib.request
 import secrets
+import hashlib
 import os
 from http.cookies import SimpleCookie
 from pathlib import Path
@@ -18,7 +19,7 @@ HOST = "0.0.0.0"
 PORT = 18080
 BASE = Path(__file__).resolve().parent
 # Deliberately separate from the older database: this release starts clean.
-DB = Path("/tmp/bawaxict_chat_test.db")
+DB = Path(__file__).resolve().parent / "bawaxict_chat.db"
 PUBLIC_RETENTION = 5 * 60 * 60
 PRIVATE_RETENTION = 48 * 60 * 60
 ONLINE_WINDOW = 45
@@ -149,6 +150,11 @@ def init_db():
             username_change_available_at INTEGER NOT NULL DEFAULT 0,
             hotspot_user INTEGER NOT NULL DEFAULT 0,
             hotspot_verified_at INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS devices (
+            client_id TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            created_at INTEGER NOT NULL
         );
         CREATE TABLE IF NOT EXISTS community (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -320,6 +326,8 @@ def init_db():
             "ALTER TABLE users ADD COLUMN hotspot_user INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE users ADD COLUMN hotspot_verified_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE users ADD COLUMN last_activity_ts INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN recovery_code_hash TEXT",
+            "ALTER TABLE users ADD COLUMN recovery_code_set_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE skills ADD COLUMN ref_code TEXT",
             "ALTER TABLE skills ADD COLUMN fee_paid INTEGER NOT NULL DEFAULT 0",
         ):
@@ -327,6 +335,7 @@ def init_db():
                 con.execute(stmt)
             except sqlite3.OperationalError:
                 pass  # column already exists
+        con.execute('INSERT OR IGNORE INTO devices(client_id,user_id,created_at) SELECT client_id,id,last_seen FROM users')
         # Seed the development service catalog only when empty; admins can replace it in cloud migration.
         if con.execute('SELECT COUNT(*) n FROM services').fetchone()['n']==0:
             now=int(time.time())
@@ -419,6 +428,16 @@ def get_body(h):
 
 def valid_name(name):
     return 3 <= len(name.strip()) <= MAX_USER and all(c.isalnum() or c in ' _.-' for c in name.strip())
+
+def gen_recovery_code():
+    # Human-friendly recovery code, e.g. 7F3K-9QRT. Shown once at signup only.
+    import random
+    alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    part=lambda n: ''.join(random.SystemRandom().choice(alphabet) for _ in range(n))
+    return part(4)+'-'+part(4)
+
+def hash_recovery_code(code):
+    return hashlib.sha256(code.strip().upper().encode('utf-8')).hexdigest()
 
 def request_session_token(h):
     raw=h.headers.get('Cookie','')
@@ -856,22 +875,37 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 con.commit(); con.close(); send_json(self,{'ok':True}); return
         if path=='/api/join':
             username=str(data.get('username','')).strip(); client_id=str(data.get('client_id','')).strip()[:160]
+            recovery_code=str(data.get('recoveryCode','')).strip()
             if not valid_name(username):send_json(self,{'error':'Use 3–24 letters, numbers, spaces, dot, dash or underscore.'},400);return
             if not client_id:send_json(self,{'error':'Missing device identity. Reopen Community from the hotspot page.'},400);return
             now=int(time.time())
             with db_lock:
-                con=db(); device=con.execute('SELECT * FROM users WHERE client_id=?',(client_id,)).fetchone()
+                con=db()
+                dev_row=con.execute('SELECT user_id FROM devices WHERE client_id=?',(client_id,)).fetchone()
+                device=con.execute('SELECT * FROM users WHERE id=?',(dev_row['user_id'],)).fetchone() if dev_row else None
                 if device and device['identity_expires']>now:
                     con.execute('UPDATE users SET last_seen=? WHERE id=?',(now,device['id'])); con.commit(); out={'ok':True,'id':device['id'],'username':device['username'],'hidden':bool(device['hidden']),'identityExpires':device['identity_expires'],'returning':True}; cookie='fh_session=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=Lax' % (device['session_token'], max(0, device['identity_expires']-now)); con.close(); send_json(self,out,extra_headers=[('Set-Cookie',cookie)]);return
-                row=con.execute('SELECT id FROM users WHERE lower(username)=lower(?)', (username,)).fetchone()
-                if row and (not device or row['id']!=device['id']):con.close();send_json(self,{'error':'That username is already in use. Please choose another name.'},409);return
+                row=con.execute('SELECT * FROM users WHERE lower(username)=lower(?)', (username,)).fetchone()
+                if row and (not device or row['id']!=device['id']):
+                    if recovery_code and row['recovery_code_hash'] and hash_recovery_code(recovery_code)==row['recovery_code_hash']:
+                        token=secrets.token_urlsafe(32); exp=now+IDENTITY_DAYS*86400
+                        con.execute('UPDATE users SET session_token=?,identity_expires=?,last_seen=? WHERE id=?',(token,exp,now,row['id']))
+                        con.execute('INSERT OR REPLACE INTO devices(client_id,user_id,created_at) VALUES(?,?,?)',(client_id,row['id'],now))
+                        con.commit(); out={'ok':True,'id':row['id'],'username':row['username'],'hidden':bool(row['hidden']),'identityExpires':exp,'returning':True,'recoveryVerified':True}; cookie='fh_session=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=Lax' % (token, IDENTITY_DAYS*86400); con.close(); send_json(self,out,extra_headers=[('Set-Cookie',cookie)]);return
+                    con.close();send_json(self,{'error':'That username is already in use. Enter its recovery code to continue on this device, or choose another name.','recoveryRequired':True},409);return
                 token=secrets.token_urlsafe(32); exp=now+IDENTITY_DAYS*86400
+                new_code=None
                 if device:
                     con.execute('UPDATE users SET username=?,session_token=?,identity_expires=?,last_seen=?,username_changed_at=?,username_change_available_at=? WHERE id=?',(username,token,exp,now,now,now+IDENTITY_DAYS*86400,device['id']))
                     uid=device['id']
                 else:
-                    con.execute('INSERT INTO users(username,client_id,session_token,identity_expires,last_seen,username_changed_at,username_change_available_at) VALUES(?,?,?,?,?,?,?)',(username,client_id,token,exp,now,now,now+IDENTITY_DAYS*86400)); uid=con.execute('SELECT last_insert_rowid()').fetchone()[0]
-                con.commit();con.close(); cookie='fh_session=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=Lax' % (token, IDENTITY_DAYS*86400); send_json(self,{'ok':True,'id':uid,'username':username,'hidden':False,'identityExpires':exp,'returning':False},extra_headers=[('Set-Cookie',cookie)]);return
+                    new_code=gen_recovery_code(); code_hash=hash_recovery_code(new_code)
+                    con.execute('INSERT INTO users(username,client_id,session_token,identity_expires,last_seen,username_changed_at,username_change_available_at,recovery_code_hash,recovery_code_set_at) VALUES(?,?,?,?,?,?,?,?,?)',(username,client_id,token,exp,now,now,now+IDENTITY_DAYS*86400,code_hash,now)); uid=con.execute('SELECT last_insert_rowid()').fetchone()[0]
+                    con.execute('INSERT OR REPLACE INTO devices(client_id,user_id,created_at) VALUES(?,?,?)',(client_id,uid,now))
+                con.commit();con.close(); cookie='fh_session=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=Lax' % (token, IDENTITY_DAYS*86400)
+                out={'ok':True,'id':uid,'username':username,'hidden':False,'identityExpires':exp,'returning':False}
+                if new_code: out['recoveryCode']=new_code
+                send_json(self,out,extra_headers=[('Set-Cookie',cookie)]);return
         if path=='/api/report':
             # Open endpoint: works both for a logged-in chat user reporting a
             # message/member, and for a hotspot visitor (not in chat at all)

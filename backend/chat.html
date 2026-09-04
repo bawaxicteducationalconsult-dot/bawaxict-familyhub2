@@ -183,7 +183,7 @@ let IDENTITY_EXPIRES=0,forumSeenCount=0,privateSeenCount=0,lastUnreadCount=0,unr
 function startRealtime(){
   if(!joined)return;
   try{if(eventSource){eventSource.close();eventSource=null;}
-    eventSource=new EventSource('/api/stream?since='+encodeURIComponent(lastEventId),{withCredentials:true});
+    eventSource=new EventSource('/api/familyhub/stream?since='+encodeURIComponent(lastEventId),{withCredentials:true});
     eventSource.onopen=()=>{realtimeBackoff=1000;};
     eventSource.onmessage=async ev=>{
       try{const d=JSON.parse(ev.data||'{}'); if(d.id)lastEventId=Math.max(lastEventId,Number(d.id));
@@ -198,7 +198,7 @@ function startRewardTicker(){refreshRewardTicker();if(!rewardTickerPoll)rewardTi
 function param(n){return new URLSearchParams(location.search).get(n)||''} const HOME=param('home')||''; const PREFERRED_NAME=param('preferredName')||'';
 function returnToPortal(){if(HOME){window.location.assign(HOME);return}window.location.assign('/');}
 try{CLIENT_ID=param('client')||localStorage.getItem('bawaxict_client_id')||'';if(!CLIENT_ID){CLIENT_ID='browser-'+crypto.randomUUID();}localStorage.setItem('bawaxict_client_id',CLIENT_ID);}catch(e){CLIENT_ID='browser-'+Date.now()+'-'+Math.random().toString(16).slice(2)}
-function api(path,opt){opt=opt||{};if(path.indexOf('/api/')===0)path='/api/familyhub'+path.slice(4);return new Promise((resolve,reject)=>{const x=new XMLHttpRequest();x.open((opt.method||'GET'),path,true);x.withCredentials=true;x.setRequestHeader('Accept','application/json');if((opt.method||'GET').toUpperCase()==='POST')x.setRequestHeader('Content-Type','application/json');x.timeout=7000;x.onreadystatechange=()=>{if(x.readyState!==4)return;let d={};try{d=JSON.parse(x.responseText||'{}')}catch(e){}if(x.status>=200&&x.status<300)resolve(d);else reject(new Error(d.error||'Request failed ('+x.status+')'))};x.onerror=()=>reject(new Error('Unable to reach the local chat server.'));x.ontimeout=()=>reject(new Error('The local chat server timed out.'));x.send(opt.body||null)})}
+function api(path,opt){opt=opt||{};if(path.indexOf('/api/')===0)path='/api/familyhub'+path.slice(4);return new Promise((resolve,reject)=>{const x=new XMLHttpRequest();x.open((opt.method||'GET'),path,true);x.withCredentials=true;x.setRequestHeader('Accept','application/json');if((opt.method||'GET').toUpperCase()==='POST')x.setRequestHeader('Content-Type','application/json');x.timeout=7000;x.onreadystatechange=()=>{if(x.readyState!==4)return;let d={};try{d=JSON.parse(x.responseText||'{}')}catch(e){}if(x.status>=200&&x.status<300)resolve(d);else{const err=new Error(d.error||'Request failed ('+x.status+')');err.data=d;reject(err)}};x.onerror=()=>reject(new Error('Unable to reach the local chat server.'));x.ontimeout=()=>reject(new Error('The local chat server timed out.'));x.send(opt.body||null)})}
 function q(){return ''}
 function body(o){return JSON.stringify(o||{})}
 function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}function avatar(n){return (n||'?').trim().charAt(0).toUpperCase()||'?'}function fmt(t){return new Date(t*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}function toast(t){const x=document.createElement('div');x.className='toast';x.textContent=t;document.body.appendChild(x);setTimeout(()=>x.remove(),2800)}
@@ -295,7 +295,7 @@ async function refreshRewardTicker(){
     if(items.length){rewardTickerText.textContent=items.join('     •     ');rewardTicker.classList.add('show')}else{rewardTicker.classList.remove('show')}
   }catch(e){}
 }
-async function join(auto){let n=auto?auto.username:nameInput.value.trim();if(!/^[A-Za-z0-9 _.-]{3,24}$/.test(n)){nameError.textContent='Use 3–24 letters, numbers, spaces, dot, dash or underscore.';return}joinBtn.disabled=true;nameError.textContent='';try{const r=await api('/api/join',{method:'POST',body:JSON.stringify({username:n,client_id:CLIENT_ID})});CHAT_USER=r.username;TOKEN='';MY_ID=Number(r.id||0);saveIdentity(r.identityExpires);setJoined(r);const b=await api('/api/blocks'+q());blocks=new Set(b.users||[]);await selectForum();await refreshOnline();await refreshUnread();if(!onlinePoll)onlinePoll=setInterval(refreshOnline,4000);startRealtime();startRewardTicker()}catch(e){nameError.textContent=e.message||'Unable to join the community.'}finally{joinBtn.disabled=false;joinBtn.textContent='Join Community'}}
+async function join(auto,recoveryCode){let n=auto?auto.username:nameInput.value.trim();if(!/^[A-Za-z0-9 _.-]{3,24}$/.test(n)){nameError.textContent='Use 3–24 letters, numbers, spaces, dot, dash or underscore.';return}joinBtn.disabled=true;nameError.textContent='';try{const body={username:n,client_id:CLIENT_ID};if(recoveryCode)body.recoveryCode=recoveryCode;const r=await api('/api/join',{method:'POST',body:JSON.stringify(body)});CHAT_USER=r.username;TOKEN='';MY_ID=Number(r.id||0);saveIdentity(r.identityExpires);setJoined(r);if(r.recoveryCode){showRecoveryModal(r.recoveryCode)}const b=await api('/api/blocks'+q());blocks=new Set(b.users||[]);await selectForum();await refreshOnline();await refreshUnread();if(!onlinePoll)onlinePoll=setInterval(refreshOnline,4000);startRealtime();startRewardTicker()}catch(e){if(e.data&&e.data.recoveryRequired){const code=prompt('That username is already registered on FamilyHub. Enter its recovery code to continue on this device, or press Cancel to choose a different name:');if(code){await join(auto,code.trim());return}}nameError.textContent=e.message||'Unable to join the community.'}finally{joinBtn.disabled=false;joinBtn.textContent='Join Community'}}
 backBtn.onclick=selectForum;homeBtn.onclick=returnToPortal;mobileHome.onclick=returnToPortal;mobileForum.onclick=selectForum;mobilePrivate.onclick=async()=>{mode='private';selected='';selectedThread=0;app.classList.remove('private-open');backBtn.style.display='none';headTitle.textContent='Private Chats';headAvatar.textContent='P';headStatus.textContent='Your private conversations';blockBtn.style.display='none';unblockBtn.style.display='none';blocked.style.display='none';privateTab.classList.add('active');forumTab.classList.remove('active');mobilePrivate.classList.add('active');mobileForum.classList.remove('active');await renderPrivateList();newPrivate.style.display='block'};
 joinBtn.onclick=()=>join(false);nameInput.onkeydown=e=>{if(e.key==='Enter')join(false)};forumTab.onclick=selectForum;privateTab.onclick=async()=>{mode='private';selected='';selectedThread=0;app.classList.remove('private-open');app.classList.add('side-open');backBtn.style.display='none';headTitle.textContent='Private Chats';headAvatar.textContent='P';headStatus.textContent='Your private conversations';blockBtn.style.display='none';unblockBtn.style.display='none';blocked.style.display='none';privateTab.classList.add('active');forumTab.classList.remove('active');await renderPrivateList();newPrivate.style.display='block'};newPrivate.onclick=async()=>{selected='';selectedThread=0;mode='forum';app.classList.remove('private-open');app.classList.add('side-open');headTitle.textContent='Choose a member for Private Chat';headAvatar.textContent='＋';headStatus.textContent='Select a member below to start a private conversation';forumTab.classList.add('active');privateTab.classList.remove('active');newPrivate.style.display='none';await refreshOnline();};search.oninput=()=>{if(mode==='private'&&selected)return;mode==='private'?renderPrivateList():renderPeople()};document.getElementById('backBtn').onclick=(e)=>{e.preventDefault();if(selected){selected='';selectedThread=0;app.classList.remove('private-open');app.classList.add('side-open');headTitle.textContent='Private Chats';headAvatar.textContent='P';headStatus.textContent='Your private conversations';newPrivate.style.display='block';renderPrivateList()}else selectForum()};document.getElementById('mobileForum').onclick=()=>selectForum();document.getElementById('mobilePrivate').onclick=()=>privateTab.onclick();document.getElementById('mobileHome').onclick=()=>document.getElementById('homeBtn').click();document.getElementById('homeBtn').onclick=()=>{if(HOME)location.href=HOME;else if(document.referrer)location.href=document.referrer;else history.back()};
 composer.onsubmit=async e=>{e.preventDefault();const text=msg.value.trim();if(!text||!joined)return;try{if(mode==='forum'){const sent=await api('/api/community',{method:'POST',body:body({message:text})});msg.value='';forumOpen=true;lastForumSig='';if(sent&&sent.message){chatBg.appendChild(bubble(sent.message));if(window.syncMobileComposer)window.syncMobileComposer();requestAnimationFrame(()=>{if(window.syncMobileComposer)window.syncMobileComposer();chatBg.scrollTop=chatBg.scrollHeight+9999;});}await refreshActive();if(sent&&sent.ok!==true)toast('Message was not accepted.')}else if(selected&&!blocks.has(selected)){await api('/api/private',{method:'POST',body:body({recipient:selected,message:text})});msg.value='';privateOpen=true;lastPrivateSig='';await refreshActive();await refreshUnread();await refreshPrivateListOnly()}}catch(e){toast(e.message||'Unable to send message.')}};
@@ -381,4 +381,30 @@ async function completeAutoJoin(r){CHAT_USER=r.username;TOKEN='';MY_ID=Number(r.
   setTimeout(syncMobileComposer,100);
   document.addEventListener('input',function(e){if(e.target&&e.target.id==='msg')syncMobileComposer()});
 })();
+
+function showRecoveryModal(code){
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  const box=document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:12px;padding:24px;max-width:360px;width:100%;text-align:center;font-family:sans-serif';
+  box.innerHTML='<h3 style="margin:0 0 12px">Save your recovery code</h3>'+
+    '<p style="margin:0 0 16px;color:#444">You will need this code to use this username on another device. Write it down or copy it now.</p>'+
+    '<div style="font-size:22px;font-weight:bold;letter-spacing:2px;background:#f2f2f2;padding:12px;border-radius:8px;margin-bottom:16px">'+code+'</div>'+
+    '<button id="rc-copy-btn" style="padding:10px 18px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-size:15px;cursor:pointer;margin-right:8px">Copy Code</button>'+
+    '<button id="rc-close-btn" style="padding:10px 18px;border:none;border-radius:8px;background:#e5e5e5;color:#333;font-size:15px;cursor:pointer">Done</button>';
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  document.getElementById('rc-copy-btn').onclick=async()=>{
+    try{
+      await navigator.clipboard.writeText(code);
+      document.getElementById('rc-copy-btn').textContent='Copied!';
+    }catch(e){
+      const ta=document.createElement('textarea');
+      ta.value=code; document.body.appendChild(ta); ta.select();
+      try{document.execCommand('copy');document.getElementById('rc-copy-btn').textContent='Copied!';}catch(e2){}
+      document.body.removeChild(ta);
+    }
+  };
+  document.getElementById('rc-close-btn').onclick=()=>{document.body.removeChild(overlay)};
+}
 })();</script></body></html>
