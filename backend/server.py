@@ -50,11 +50,23 @@ ALLOWED_VOICE_TYPES = {"audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "au
 # and can occasionally over-match — tune BLOCKED_TERMS for your community
 # (add local Pidgin/Yoruba/Igbo insults, remove anything too broad, etc.).
 BLOCKED_TERMS = [
+    # Profanity
     "fuck", "fuk", "fck", "fack", "f*ck", "shit", "sh*t", "bitch", "b*tch",
     "asshole", "azzhole", "bastard", "dick", "dickhead", "pussy", "cunt",
-    "whore", "slut", "nigger", "nigga", "faggot", "retard", "motherfucker",
-    "stfu", "kill yourself", "kys", "mumu", "werey", "olodo", "ashawo",
-    "yeye person", "stupid fool", "useless fool", "bloody fool", "idiot", "stupid",
+    "whore", "slut", "motherfucker", "goddamn",
+    # Slurs / hateful terms
+    "nigger", "nigga", "faggot", "retard", "coon",
+    # Self-harm / violence
+    "stfu", "kill yourself", "kys", "kill you", "beat you", "die",
+    # General insults (English)
+    "stupid", "idiot", "moron", "dumb", "dumbass", "fool", "foolish",
+    "mad person", "you are mad", "senseless", "useless", "worthless",
+    "loser", "pathetic", "disgusting", "trash", "garbage person",
+    "shut up", "nobody likes you", "nobody wants you", "get lost",
+    "ugly", "shameless", "disgrace", "nonsense person",
+    # Nigerian Pidgin / local insults
+    "mumu", "werey", "olodo", "ashawo", "yeye person", "yeye", "ode",
+    "oponu", "ashewo", "agbaya", "onigbese", "ole", "jonzing", "razz",
 ]
 # Leetspeak normalization so simple obfuscation ("f4ck", "a$$hole") still hits.
 LEET_MAP = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s"})
