@@ -6,3 +6,4 @@ backend/*.backup-*
 backend/patch_*.py
 backend/server.log
 site/*.before-*
+backend/backups/
