@@ -695,7 +695,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             user=auth(con,{},self)
             if path=='/api/members':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
-                rows=online_for(con,user['id']); out=[{'username':r['username'],'online':True,'hidden':bool(r['hidden']),'self':r['id']==user['id']} for r in rows]; con.close(); send_json(self,{'members':out}); return
+                rows=online_for(con,user['id']); out=[{'username':r['username'],'online':True,'hidden':bool(r['hidden']),'self':r['id']==user['id']} for r in rows]
+                total=con.execute('SELECT COUNT(*) n FROM users WHERE last_seen>=?',(int(time.time())-ONLINE_WINDOW,)).fetchone()['n']
+                con.close(); send_json(self,{'members':out,'onlineCount':total}); return
             if path=='/api/profile':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
                 con.close(); send_json(self,{'username':user['username'],'hidden':bool(user['hidden']),'identityExpires':user['identity_expires'],'hotspotUser':bool(user['hotspot_user']),'usernameChangedAt':int(user['username_changed_at'] or 0),'usernameChangeAvailableAt':int(user['username_change_available_at'] or 0),'usernameChangeAvailable':int(user['username_change_available_at'] or 0) <= int(time.time())}); return
