@@ -54,7 +54,7 @@ BLOCKED_TERMS = [
     "asshole", "azzhole", "bastard", "dick", "dickhead", "pussy", "cunt",
     "whore", "slut", "nigger", "nigga", "faggot", "retard", "motherfucker",
     "stfu", "kill yourself", "kys", "mumu", "werey", "olodo", "ashawo",
-    "yeye person", "stupid fool", "useless fool", "bloody fool", "idiot",
+    "yeye person", "stupid fool", "useless fool", "bloody fool", "idiot", "stupid",
 ]
 # Leetspeak normalization so simple obfuscation ("f4ck", "a$$hole") still hits.
 LEET_MAP = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s"})
