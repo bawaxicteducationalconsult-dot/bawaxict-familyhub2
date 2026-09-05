@@ -183,7 +183,7 @@ let IDENTITY_EXPIRES=0,forumSeenCount=0,privateSeenCount=0,lastUnreadCount=0,unr
 function startRealtime(){
   if(!joined)return;
   try{if(eventSource){eventSource.close();eventSource=null;}
-    eventSource=new EventSource('/api/familyhub/stream?since='+encodeURIComponent(lastEventId),{withCredentials:true});
+    eventSource=new EventSource('/api/stream?since='+encodeURIComponent(lastEventId),{withCredentials:true});
     eventSource.onopen=()=>{realtimeBackoff=1000;};
     eventSource.onmessage=async ev=>{
       try{const d=JSON.parse(ev.data||'{}'); if(d.id)lastEventId=Math.max(lastEventId,Number(d.id));
