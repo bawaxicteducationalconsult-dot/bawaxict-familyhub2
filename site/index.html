@@ -235,11 +235,7 @@ button{font:inherit}
       return !!(x && x.expires>Date.now()/1000 && x.username && x.clientId);
     }catch(e){return false}
   }
-     if(hasIdentity()){
-    document.querySelectorAll('a[href="community-chat.html"]').forEach(function(a){
-      a.setAttribute('href','/familyhub/');
-    });
-  }
+    
   function getClientId(){
     try{
       var c=localStorage.getItem('bawaxict_client_id')||'';
@@ -294,22 +290,25 @@ button{font:inherit}
   nameInput.addEventListener('keydown', function(e){if(e.key==='Enter')joinBtn.click()});
     skip.addEventListener('click', function(){ if(Date.now()-gateShownAt<1200) return; hideGate(); });
 
-  document.addEventListener('click', function(e){
+   document.addEventListener('click', function(e){
+    var link=e.target.closest('a[href]');
+    if(link && link.getAttribute('href')==='community-chat.html' && hasIdentity()){
+      e.preventDefault();
+      location.href='/familyhub/';
+      return;
+    }
     if(hasIdentity()) return;
     if(e.target.closest('#gateOverlay')) return;
     var el=e.target.closest('a, button');
     if(!el) return;
     if(el.id==='menuBtn') return;
     e.preventDefault();
-    var link=e.target.closest('a[href]');
     pendingHref = link ? link.getAttribute('href') : null;
     showGate();
   }, true);
 
   if(!hasIdentity()) showGate();
-     window.onerror = function(msg, url, line){ alert('JS ERROR: '+msg+' (line '+line+')'); };
-  var origHide = hideGate;
-  hideGate = function(){ alert('hideGate() was called — something triggered this'); origHide(); };
+    
 })();
 </script>
 </body>
