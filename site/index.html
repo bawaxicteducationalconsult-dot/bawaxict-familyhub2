@@ -307,6 +307,9 @@ button{font:inherit}
   }, true);
 
   if(!hasIdentity()) showGate();
+     window.onerror = function(msg, url, line){ alert('JS ERROR: '+msg+' (line '+line+')'); };
+  var origHide = hideGate;
+  hideGate = function(){ alert('hideGate() was called — something triggered this'); origHide(); };
 })();
 </script>
 </body>
