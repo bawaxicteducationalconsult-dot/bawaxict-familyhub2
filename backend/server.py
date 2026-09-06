@@ -129,6 +129,8 @@ db_lock = threading.Lock()
 def db():
     con = sqlite3.connect(DB, timeout=10)
     con.row_factory = sqlite3.Row
+    con.execute('PRAGMA journal_mode=WAL;')
+    con.execute('PRAGMA busy_timeout=10000;')
     return con
 
 def load_admin_key():
