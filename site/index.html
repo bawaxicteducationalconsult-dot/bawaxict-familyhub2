@@ -312,14 +312,24 @@ button{font:inherit}
         };
         document.getElementById('recoveryCopyBtn').onclick=function(){
           var box=document.getElementById('recoveryCodeBox');
-          box.select(); box.setSelectionRange(0,999);
-          try{
+          var msg=document.getElementById('recoveryCopyMsg');
+          box.focus(); box.select(); box.setSelectionRange(0,999);
+          function fallbackCopy(){
+            var ok=false;
+            try{ ok=document.execCommand('copy'); }catch(e){ ok=false; }
+            if(ok){
+              msg.style.color='#118652'; msg.textContent='Copied!';
+            }else{
+              msg.style.color='#b42318';
+              msg.textContent="Couldn't copy automatically — the code is selected, use your keyboard's copy option.";
+            }
+          }
+          if(navigator.clipboard && navigator.clipboard.writeText){
             navigator.clipboard.writeText(box.value).then(function(){
-              document.getElementById('recoveryCopyMsg').textContent='Copied!';
-            });
-          }catch(e){
-            document.execCommand('copy');
-            document.getElementById('recoveryCopyMsg').textContent='Copied!';
+              msg.style.color='#118652'; msg.textContent='Copied!';
+            }).catch(fallbackCopy);
+          }else{
+            fallbackCopy();
           }
         };
       }else{
@@ -367,7 +377,7 @@ button{font:inherit}
     
 })();
 </script>
-   <script>
+<script>
 (function(){
   function familyhubUrl(p){return '/familyhub'+p}
   var trigger=document.getElementById('profileTrigger'),
@@ -450,7 +460,15 @@ button{font:inherit}
     finally{ photoBtn.disabled=false; photoBtn.textContent='Change Photo'; }
   });
 
- </script>
+  if(saveBtn) saveBtn.addEventListener('click', async function(){
+    saveBtn.disabled=true; saveMsg.textContent='';
+    try{
+      var res=await fetch(familyhubUrl('/api/profile'),{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({location:locInput.value.trim(),sex:sexSelect.value})});
+      var data=await res.json();
+      if(res.ok){ saveMsg.style.color='#118652'; saveMsg.textContent='Saved!'; }
+      else{ saveMsg.style.color='#b42318'; saveMsg.textContent=data.error||'Unable to save.'; }
+    }catch(e){ saveMsg.style.color='#b42318'; saveMsg.textContent='Network error.'; }
+    finally{ saveBtn.disabled=false; }
   });
 })();
 </script>
