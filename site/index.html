@@ -192,12 +192,123 @@ button{font:inherit}
   document.getElementById('userName').textContent=name;
   document.getElementById('welcomeName').textContent=name;
 
-  var logout=document.getElementById('logoutBtn');
+      var logout=document.getElementById('logoutBtn');
   if(logout) logout.addEventListener('click',function(e){
     e.preventDefault();
-    try{localStorage.removeItem('bawaxict_username');localStorage.removeItem('familyhub_username')}catch(err){}
-    location.href='community-chat.html';
+    fetch('/familyhub/api/logout',{method:'POST',credentials:'include'}).catch(function(){}).finally(function(){
+      try{
+        localStorage.removeItem('bawaxict_username');
+        localStorage.removeItem('familyhub_username');
+        localStorage.removeItem('bawaxict_identity');
+      }catch(err){}
+      location.reload();
+    });
   });
+})();
+</script>
+  <style>
+#gateOverlay{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;place-items:center;padding:18px;z-index:200}
+#gateOverlay.show{display:grid}
+#gateOverlay .gate-card{width:min(420px,94vw);background:#fff;border-radius:16px;padding:24px;box-shadow:0 15px 50px rgba(0,0,0,.35);text-align:center;font-family:Inter,system-ui,sans-serif}
+#gateOverlay .gate-card h2{color:#073b2c;margin:6px 0 8px;font-size:20px}
+#gateOverlay .gate-card p{color:#6d7e76;font-size:13px;line-height:1.5;margin:0 0 14px}
+#gateOverlay input{width:100%;box-sizing:border-box;padding:12px;border:1px solid #ccd5d2;border-radius:9px;font-size:15px;outline:0}
+#gateOverlay .gate-btn{width:100%;margin-top:10px;padding:12px;border:0;border-radius:9px;background:#073b2c;color:#fff;font-weight:800;font-size:14px;cursor:pointer}
+#gateOverlay .gate-error{min-height:18px;color:#b42318;font-size:12px;margin-top:8px}
+#gateOverlay .gate-skip{display:inline-block;margin-top:12px;color:#6d7e76;font-size:12px;text-decoration:underline;cursor:pointer}
+</style>
+<div id="gateOverlay">
+  <div class="gate-card">
+    <h2>Join BAWAXICT Community</h2>
+    <p>Enter a username to access the community, services and everything else on this platform. This is saved on this device for 21 days.</p>
+    <input id="gateName" maxlength="24" placeholder="e.g. Tunde123" autocomplete="off">
+    <button class="gate-btn" id="gateJoinBtn" type="button">Continue</button>
+    <div class="gate-error" id="gateError"></div>
+    <span class="gate-skip" id="gateSkip">Just browsing — I'll register later</span>
+  </div>
+</div>
+<script>
+(function(){
+  function hasIdentity(){
+    try{
+      var x=JSON.parse(localStorage.getItem('bawaxict_identity')||'null');
+      return !!(x && x.expires>Date.now()/1000 && x.username && x.clientId);
+    }catch(e){return false}
+  }
+    
+  function getClientId(){
+    try{
+      var c=localStorage.getItem('bawaxict_client_id')||'';
+      if(!c){c='browser-'+crypto.randomUUID();localStorage.setItem('bawaxict_client_id',c)}
+      return c;
+    }catch(e){return 'browser-'+Date.now()+'-'+Math.random().toString(16).slice(2)}
+  }
+  var overlay=document.getElementById('gateOverlay'), nameInput=document.getElementById('gateName'),
+      joinBtn=document.getElementById('gateJoinBtn'), errorBox=document.getElementById('gateError'),
+      skip=document.getElementById('gateSkip');
+  var pendingHref=null;
+  var gateShownAt=0;
+    function showGate(){gateShownAt=Date.now();overlay.classList.add('show');nameInput.focus()}
+  function hideGate(){overlay.classList.remove('show')}
+
+  async function doJoin(username, recoveryCode){
+    errorBox.textContent='';joinBtn.disabled=true;
+    try{
+      var body={username:username, client_id:getClientId()};
+      if(recoveryCode) body.recoveryCode=recoveryCode;
+     var res=await fetch('/familyhub/api/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'include'});
+      var data=await res.json();
+      if(!res.ok){
+        if(data.recoveryRequired){
+          var code=prompt('That username is already registered. Enter its recovery code to continue on this device, or press Cancel to choose a different name:');
+          if(code){await doJoin(username, code.trim());return}
+        }
+        errorBox.textContent=data.error||'Unable to join. Try a different username.';
+        return;
+      }
+      localStorage.setItem('bawaxict_identity', JSON.stringify({expires:data.identityExpires, username:data.username, clientId:body.client_id}));
+      try{localStorage.setItem('bawaxict_username', data.username)}catch(e){}
+      if(data.recoveryCode){
+        alert('Save this recovery code — you will need it to log back in as '+data.username+' on another device:\n\n'+data.recoveryCode);
+      }
+      hideGate();
+      document.getElementById('userName').textContent=data.username;
+      document.getElementById('welcomeName').textContent=data.username;
+      if(pendingHref){var dest=pendingHref;pendingHref=null;location.href=dest}
+    }catch(e){
+      errorBox.textContent='Network error. Please try again.';
+    }finally{
+      joinBtn.disabled=false;
+    }
+  }
+
+  joinBtn.addEventListener('click', function(){
+    var n=nameInput.value.trim();
+    if(!/^[A-Za-z0-9 _.-]{3,24}$/.test(n)){errorBox.textContent='Use 3–24 letters, numbers, spaces, dot, dash or underscore.';return}
+    doJoin(n);
+  });
+  nameInput.addEventListener('keydown', function(e){if(e.key==='Enter')joinBtn.click()});
+    skip.addEventListener('click', function(){ if(Date.now()-gateShownAt<1200) return; hideGate(); });
+
+   document.addEventListener('click', function(e){
+    var link=e.target.closest('a[href]');
+    if(link && link.getAttribute('href')==='community-chat.html' && hasIdentity()){
+      e.preventDefault();
+      location.href='/familyhub/';
+      return;
+    }
+    if(hasIdentity()) return;
+    if(e.target.closest('#gateOverlay')) return;
+    var el=e.target.closest('a, button');
+    if(!el) return;
+    if(el.id==='menuBtn') return;
+    e.preventDefault();
+    pendingHref = link ? link.getAttribute('href') : null;
+    showGate();
+  }, true);
+
+  if(!hasIdentity()) showGate();
+    
 })();
 </script>
 </body>
