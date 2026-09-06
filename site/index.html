@@ -192,11 +192,18 @@ button{font:inherit}
   document.getElementById('userName').textContent=name;
   document.getElementById('welcomeName').textContent=name;
 
-  var logout=document.getElementById('logoutBtn');
+    var logout=document.getElementById('logoutBtn');
   if(logout) logout.addEventListener('click',function(e){
     e.preventDefault();
-    try{localStorage.removeItem('bawaxict_username');localStorage.removeItem('familyhub_username')}catch(err){}
-    location.href='community-chat.html';
+    fetch('/familyhub/api/logout',{method:'POST',credentials:'include'}).catch(function(){}).finally(function(){
+      try{
+        localStorage.removeItem('bawaxict_username');
+        localStorage.removeItem('familyhub_username');
+        localStorage.removeItem('bawaxict_identity');
+        localStorage.removeItem('bawaxict_client_id');
+      }catch(err){}
+      location.reload();
+    });
   });
 })();
 </script>
