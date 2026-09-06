@@ -192,7 +192,7 @@ button{font:inherit}
   document.getElementById('userName').textContent=name;
   document.getElementById('welcomeName').textContent=name;
 
-    var logout=document.getElementById('logoutBtn');
+      var logout=document.getElementById('logoutBtn');
   if(logout) logout.addEventListener('click',function(e){
     e.preventDefault();
     fetch('/familyhub/api/logout',{method:'POST',credentials:'include'}).catch(function(){}).finally(function(){
@@ -200,7 +200,6 @@ button{font:inherit}
         localStorage.removeItem('bawaxict_username');
         localStorage.removeItem('familyhub_username');
         localStorage.removeItem('bawaxict_identity');
-        localStorage.removeItem('bawaxict_client_id');
       }catch(err){}
       location.reload();
     });
@@ -235,6 +234,11 @@ button{font:inherit}
       var x=JSON.parse(localStorage.getItem('bawaxict_identity')||'null');
       return !!(x && x.expires>Date.now()/1000 && x.username && x.clientId);
     }catch(e){return false}
+  }
+     if(hasIdentity()){
+    document.querySelectorAll('a[href="community-chat.html"]').forEach(function(a){
+      a.setAttribute('href','/familyhub/');
+    });
   }
   function getClientId(){
     try{
