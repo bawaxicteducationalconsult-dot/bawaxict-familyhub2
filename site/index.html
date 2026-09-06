@@ -366,5 +366,100 @@ button{font:inherit}
     
 })();
 </script>
+   <script>
+(function(){
+  function familyhubUrl(p){return '/familyhub'+p}
+  var trigger=document.getElementById('profileTrigger'),
+      panel=document.getElementById('profilePanel'),
+      photoWrap=document.getElementById('profilePhotoWrap'),
+      photoInput=document.getElementById('profilePhotoInput'),
+      photoBtn=document.getElementById('profilePhotoBtn'),
+      nameEl=document.getElementById('profilePanelName'),
+      locInput=document.getElementById('profileLocation'),
+      sexSelect=document.getElementById('profileSex'),
+      saveBtn=document.getElementById('profileSaveBtn'),
+      saveMsg=document.getElementById('profileSaveMsg'),
+      avatarSmall=document.getElementById('profileAvatar');
+
+  function hasIdentity(){
+    try{
+      var x=JSON.parse(localStorage.getItem('bawaxict_identity')||'null');
+      return !!(x && x.expires>Date.now()/1000 && x.username && x.clientId);
+    }catch(e){return false}
+  }
+
+  function setPhotoPreview(id){
+    if(id){
+      var url=familyhubUrl('/api/media/'+id);
+      photoWrap.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover">';
+      avatarSmall.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+    }else{
+      photoWrap.textContent='●';
+      avatarSmall.textContent='●';
+    }
+  }
+
+  async function loadProfile(){
+    try{
+      var res=await fetch(familyhubUrl('/api/profile'),{credentials:'include'});
+      var data=await res.json();
+      if(!res.ok) return;
+      nameEl.textContent=data.username||'—';
+      locInput.value=data.location||'';
+      sexSelect.value=data.sex||'';
+      setPhotoPreview(data.profilePhotoId||null);
+    }catch(e){}
+  }
+
+  function positionPanel(){
+    var r=trigger.getBoundingClientRect();
+    panel.style.top=(r.bottom+8)+'px';
+    var left=r.right-panel.offsetWidth;
+    if(left<10) left=10;
+    panel.style.left=left+'px';
+  }
+
+  function openPanel(){ panel.style.display='block'; positionPanel(); loadProfile(); }
+  function closePanel(){ panel.style.display='none'; saveMsg.textContent=''; }
+
+  if(trigger) trigger.addEventListener('click', function(e){
+    if(!hasIdentity()) return;
+    e.stopPropagation();
+    if(panel.style.display==='block') closePanel(); else openPanel();
+  });
+
+  document.addEventListener('click', function(e){
+    if(panel.style.display==='block' && !panel.contains(e.target) && e.target!==trigger && !trigger.contains(e.target)){
+      closePanel();
+    }
+  });
+
+  if(photoBtn) photoBtn.addEventListener('click', function(){ photoInput.click(); });
+  if(photoInput) photoInput.addEventListener('change', async function(){
+    var file=photoInput.files[0];
+    if(!file) return;
+    var fd=new FormData(); fd.append('file', file);
+    photoBtn.disabled=true; photoBtn.textContent='Uploading…';
+    try{
+      var res=await fetch(familyhubUrl('/api/profile/photo'),{method:'POST',body:fd,credentials:'include'});
+      var data=await res.json();
+      if(res.ok && data.profilePhotoId){ setPhotoPreview(data.profilePhotoId); }
+      else{ alert(data.error||'Unable to upload photo.'); }
+    }catch(e){ alert('Network error uploading photo.'); }
+    finally{ photoBtn.disabled=false; photoBtn.textContent='Change Photo'; }
+  });
+
+  if(saveBtn) saveBtn.addEventListener('click', async function(){
+    saveBtn.disabled=true; saveMsg.textContent='';
+    try{
+      var res=await fetch(familyhubUrl('/api/profile'),{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({location:locInput.value.trim(),sex:sexSelect.value})});
+      var data=await res.json();
+      if(res.ok){ saveMsg.style.color='#118652'; saveMsg.textContent='Saved!'; }
+      else{ saveMsg.style.color='#b42318'; saveMsg.textContent=data.error||'Unable to save.'; }
+    }catch(e){ saveMsg.style.color='#b42318'; saveMsg.textContent='Network error.'; }
+    finally{ saveBtn.disabled=false; }
+  });
+})();
+</script>
 </body>
 </html>
