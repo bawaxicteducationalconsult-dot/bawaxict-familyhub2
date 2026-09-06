@@ -251,8 +251,8 @@ button{font:inherit}
       joinBtn=document.getElementById('gateJoinBtn'), errorBox=document.getElementById('gateError'),
       skip=document.getElementById('gateSkip');
   var pendingHref=null;
-
-  function showGate(){overlay.classList.add('show');nameInput.focus()}
+  var gateShownAt=0;
+    function showGate(){gateShownAt=Date.now();overlay.classList.add('show');nameInput.focus()}
   function hideGate(){overlay.classList.remove('show')}
 
   async function doJoin(username, recoveryCode){
@@ -292,7 +292,7 @@ button{font:inherit}
     doJoin(n);
   });
   nameInput.addEventListener('keydown', function(e){if(e.key==='Enter')joinBtn.click()});
-  skip.addEventListener('click', hideGate);
+    skip.addEventListener('click', function(){ if(Date.now()-gateShownAt<1200) return; hideGate(); });
 
   document.addEventListener('click', function(e){
     if(hasIdentity()) return;
