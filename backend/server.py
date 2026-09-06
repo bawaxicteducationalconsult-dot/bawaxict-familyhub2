@@ -897,25 +897,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 con=db()
                 dev_row=con.execute('SELECT user_id FROM devices WHERE client_id=?',(client_id,)).fetchone()
                 device=con.execute('SELECT * FROM users WHERE id=?',(dev_row['user_id'],)).fetchone() if dev_row else None
-                if device and device['identity_expires']>now:
-                    con.execute('UPDATE users SET last_seen=? WHERE id=?',(now,device['id'])); con.commit(); out={'ok':True,'id':device['id'],'username':device['username'],'hidden':bool(device['hidden']),'identityExpires':device['identity_expires'],'returning':True}; cookie='fh_session=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=Lax' % (device['session_token'], max(0, device['identity_expires']-now)); con.close(); send_json(self,out,extra_headers=[('Set-Cookie',cookie)]);return
                 row=con.execute('SELECT * FROM users WHERE lower(username)=lower(?)', (username,)).fetchone()
+                if row and recovery_code and row['recovery_code_hash'] and hash_recovery_code(recovery_code)==row['recovery_code_hash']:
+                    token=secrets.token_urlsafe(32); exp=now+IDENTITY_DAYS*86400
+                    con.execute('UPDATE users SET session_token=?,identity_expires=?,last_seen=? WHERE id=?',(token,exp,now,row['id']))
+                    con.execute('INSERT OR REPLACE INTO devices(client_id,user_id,created_at) VALUES(?,?,?)',(client_id,row['id'],now))
+                    con.commit(); out={'ok':True,'id':row['id'],'username':row['username'],'hidden':bool(row['hidden']),'identityExpires':exp,'returning':True,'recoveryVerified':True}; cookie='fh_session=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=Lax' % (token, IDENTITY_DAYS*86400); con.close(); send_json(self,out,extra_headers=[('Set-Cookie',cookie)]);return
+                if device and device['identity_expires']>now and device['username'].lower()==username.lower():
+                    con.execute('UPDATE users SET last_seen=? WHERE id=?',(now,device['id'])); con.commit(); out={'ok':True,'id':device['id'],'username':device['username'],'hidden':bool(device['hidden']),'identityExpires':device['identity_expires'],'returning':True}; cookie='fh_session=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=Lax' % (device['session_token'], max(0, device['identity_expires']-now)); con.close(); send_json(self,out,extra_headers=[('Set-Cookie',cookie)]);return
                 if row and (not device or row['id']!=device['id']):
-                    if recovery_code and row['recovery_code_hash'] and hash_recovery_code(recovery_code)==row['recovery_code_hash']:
-                        token=secrets.token_urlsafe(32); exp=now+IDENTITY_DAYS*86400
-                        con.execute('UPDATE users SET session_token=?,identity_expires=?,last_seen=? WHERE id=?',(token,exp,now,row['id']))
-                        con.execute('INSERT OR REPLACE INTO devices(client_id,user_id,created_at) VALUES(?,?,?)',(client_id,row['id'],now))
-                        con.commit(); out={'ok':True,'id':row['id'],'username':row['username'],'hidden':bool(row['hidden']),'identityExpires':exp,'returning':True,'recoveryVerified':True}; cookie='fh_session=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=Lax' % (token, IDENTITY_DAYS*86400); con.close(); send_json(self,out,extra_headers=[('Set-Cookie',cookie)]);return
                     con.close();send_json(self,{'error':'That username is already in use. Enter its recovery code to continue on this device, or choose another name.','recoveryRequired':True},409);return
                 token=secrets.token_urlsafe(32); exp=now+IDENTITY_DAYS*86400
-                new_code=None
-                if device:
-                    con.execute('UPDATE users SET username=?,session_token=?,identity_expires=?,last_seen=?,username_changed_at=?,username_change_available_at=? WHERE id=?',(username,token,exp,now,now,now+IDENTITY_DAYS*86400,device['id']))
-                    uid=device['id']
-                else:
-                    new_code=gen_recovery_code(); code_hash=hash_recovery_code(new_code)
-                    con.execute('INSERT INTO users(username,client_id,session_token,identity_expires,last_seen,username_changed_at,username_change_available_at,recovery_code_hash,recovery_code_set_at) VALUES(?,?,?,?,?,?,?,?,?)',(username,client_id,token,exp,now,now,now+IDENTITY_DAYS*86400,code_hash,now)); uid=con.execute('SELECT last_insert_rowid()').fetchone()[0]
-                    con.execute('INSERT OR REPLACE INTO devices(client_id,user_id,created_at) VALUES(?,?,?)',(client_id,uid,now))
+                new_code=gen_recovery_code(); code_hash=hash_recovery_code(new_code)
+                con.execute('INSERT INTO users(username,client_id,session_token,identity_expires,last_seen,username_changed_at,username_change_available_at,recovery_code_hash,recovery_code_set_at) VALUES(?,?,?,?,?,?,?,?,?)',(username,client_id,token,exp,now,now,now+IDENTITY_DAYS*86400,code_hash,now)); uid=con.execute('SELECT last_insert_rowid()').fetchone()[0]
+                con.execute('INSERT OR REPLACE INTO devices(client_id,user_id,created_at) VALUES(?,?,?)',(client_id,uid,now))
                 con.commit();con.close(); cookie='fh_session=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=Lax' % (token, IDENTITY_DAYS*86400)
                 out={'ok':True,'id':uid,'username':username,'hidden':False,'identityExpires':exp,'returning':False}
                 if new_code: out['recoveryCode']=new_code
