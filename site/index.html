@@ -227,6 +227,16 @@ button{font:inherit}
     <span class="gate-skip" id="gateSkip">Just browsing — I'll register later</span>
   </div>
 </div>
+   <div id="recoveryOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;place-items:center;padding:18px;z-index:210">
+  <div style="width:min(420px,94vw);background:#fff;border-radius:16px;padding:24px;box-shadow:0 15px 50px rgba(0,0,0,.35);text-align:center;font-family:Inter,system-ui,sans-serif">
+    <h2 style="color:#073b2c;margin:6px 0 8px;font-size:18px">Save Your Recovery Code</h2>
+    <p style="color:#6d7e76;font-size:13px;line-height:1.5;margin:0 0 14px">You'll need this to log back into <b id="recoveryUsername"></b> on another device. Write it down or copy it now — it won't be shown again.</p>
+    <input id="recoveryCodeBox" readonly style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #ccd5d2;border-radius:9px;font-size:16px;text-align:center;font-weight:800;letter-spacing:1px;background:#f5f8f6">
+    <button id="recoveryCopyBtn" type="button" style="width:100%;margin-top:10px;padding:12px;border:0;border-radius:9px;background:#073b2c;color:#fff;font-weight:800;font-size:14px;cursor:pointer">Copy Code</button>
+    <div id="recoveryCopyMsg" style="min-height:16px;color:#118652;font-size:12px;margin-top:6px"></div>
+    <button id="recoveryDoneBtn" type="button" style="width:100%;margin-top:8px;padding:11px;border:1px solid #ccd5d2;border-radius:9px;background:#fff;color:#073b2c;font-weight:700;font-size:13px;cursor:pointer">I've saved it — Continue</button>
+  </div>
+</div>
 <script>
 (function(){
   function hasIdentity(){
@@ -268,13 +278,34 @@ button{font:inherit}
       }
       localStorage.setItem('bawaxict_identity', JSON.stringify({expires:data.identityExpires, username:data.username, clientId:body.client_id}));
       try{localStorage.setItem('bawaxict_username', data.username)}catch(e){}
-      if(data.recoveryCode){
-        alert('Save this recovery code — you will need it to log back in as '+data.username+' on another device:\n\n'+data.recoveryCode);
-      }
-      hideGate();
-      document.getElementById('userName').textContent=data.username;
+            document.getElementById('userName').textContent=data.username;
       document.getElementById('welcomeName').textContent=data.username;
-      if(pendingHref){var dest=pendingHref;pendingHref=null;location.href=dest}
+      if(data.recoveryCode){
+        hideGate();
+        var dest=pendingHref;pendingHref=null;
+        document.getElementById('recoveryUsername').textContent=data.username;
+        document.getElementById('recoveryCodeBox').value=data.recoveryCode;
+        document.getElementById('recoveryOverlay').style.display='grid';
+        document.getElementById('recoveryDoneBtn').onclick=function(){
+          document.getElementById('recoveryOverlay').style.display='none';
+          if(dest) location.href=dest;
+        };
+        document.getElementById('recoveryCopyBtn').onclick=function(){
+          var box=document.getElementById('recoveryCodeBox');
+          box.select(); box.setSelectionRange(0,999);
+          try{
+            navigator.clipboard.writeText(box.value).then(function(){
+              document.getElementById('recoveryCopyMsg').textContent='Copied!';
+            });
+          }catch(e){
+            document.execCommand('copy');
+            document.getElementById('recoveryCopyMsg').textContent='Copied!';
+          }
+        };
+      }else{
+        hideGate();
+        if(pendingHref){var dest2=pendingHref;pendingHref=null;location.href=dest2}
+      }
     }catch(e){
       errorBox.textContent='Network error. Please try again.';
     }finally{
