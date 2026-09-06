@@ -249,7 +249,7 @@ button{font:inherit}
     try{
       var body={username:username, client_id:getClientId()};
       if(recoveryCode) body.recoveryCode=recoveryCode;
-      var res=await fetch('/api/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'include'});
+     var res=await fetch('/familyhub/api/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'include'});
       var data=await res.json();
       if(!res.ok){
         if(data.recoveryRequired){
