@@ -450,18 +450,7 @@ button{font:inherit}
     finally{ photoBtn.disabled=false; photoBtn.textContent='Change Photo'; }
   });
 
-  if(saveBtn) saveBtn.addEventListener('click', async function(){
-    saveBtn.disabled=true; saveMsg.textContent='';
-    try{
-      var res=await fetch(familyhubUrl('/api/profile'),{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({location:locInput.value.trim(),sex:sexSelect.value})});
-      var data=await res.json();
-      if(res.ok){ saveMsg.style.color='#118652'; saveMsg.textContent='Saved!'; }
-      else{ saveMsg.style.color='#b42318'; saveMsg.textContent=data.error||'Unable to save.'; }
-    }catch(e){ saveMsg.style.color='#b42318'; saveMsg.textContent='Network error.'; }
-    finally{ saveBtn.disabled=false; }
-  });
-})();
-</script>
+ </script>
 <script>
 (function(){
   function familyhubUrl(p){return '/familyhub'+p}
