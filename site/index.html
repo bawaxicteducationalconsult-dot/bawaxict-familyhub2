@@ -200,5 +200,24 @@ button{font:inherit}
   });
 })();
 </script>
+   <script>
+(function(){
+  function hasIdentity(){
+    try{
+      var x=JSON.parse(localStorage.getItem('bawaxict_identity')||'null');
+      return !!(x && x.expires>Date.now()/1000 && x.username && x.clientId);
+    }catch(e){return false}
+  }
+  if(!hasIdentity()){
+    document.addEventListener('click', function(e){
+      var el=e.target.closest('a, button');
+      if(!el) return;
+      if(el.id==='menuBtn') return; // mobile menu toggle stays usable for everyone
+      e.preventDefault();
+      location.href='community-chat.html';
+    }, true);
+  }
+})();
+</script>
 </body>
 </html>
