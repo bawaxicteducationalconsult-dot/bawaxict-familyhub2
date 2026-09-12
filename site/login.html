@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Join BAWAXICT FamilyHub</title>
+<link rel="stylesheet" href="css/familyhub-social.css">
+<style>
+  body {
+    margin: 0;
+    background: linear-gradient(135deg, #0b6b4f, #073b2c);
+    color: white;
+    min-height: 100dvh;
+    font-family: system-ui, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .social-card {
+    background: white;
+    color: #17352b;
+    max-width: 380px;
+    width: 100%;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  }
+  .hero-image {
+    height: 220px;
+    background: url('https://picsum.photos/id/1015/800/600') center/cover;
+    position: relative;
+  }
+  .hero-image::after {
+    content: "👥💬😊";
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 42px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  }
+  .content {
+    padding: 30px 24px;
+    text-align: center;
+  }
+  h1 {
+    font-size: 28px;
+    margin: 0 0 8px;
+    color: #073b2c;
+  }
+  p {
+    color: #6d7e76;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .input {
+    width: 100%;
+    padding: 16px;
+    font-size: 17px;
+    border: 2px solid #e2ebe6;
+    border-radius: 16px;
+    margin: 24px 0 8px;
+    text-align: center;
+    background: #f8f9f7;
+  }
+  .btn {
+    width: 100%;
+    padding: 18px;
+    background: #f28a19;
+    color: white;
+    border: none;
+    border-radius: 999px;
+    font-size: 17px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .reserved {
+    font-size: 13px;
+    color: #6d7e76;
+    margin: 20px 0;
+  }
+  .error {
+    color: #b42318;
+    min-height: 24px;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="social-card">
+  <div class="hero-image"></div>
+  
+  <div class="content">
+    <h1>Create Your Username</h1>
+    <p>This will be your identity across the entire BAWAXICT Community.<br>Your name is reserved to you for 21 days on this device.</p>
+
+    <input type="text" id="username" class="input" placeholder="e.g. AdebayoVibes" maxlength="24" onkeyup="checkUsername()">
+
+    <div id="status" class="status"></div>
+
+    <button onclick="createProfile()" class="btn">Create Profile & Join Community</button>
+
+    <div class="reserved">
+      Your username cannot be changed for 21 days on this device.<br>
+      This prevents multiple account creation.
+    </div>
+
+    <a href="index.html" style="color:#0b6b4f; font-weight:700;">Already have a profile? Continue →</a>
+
+    <div id="error" class="error"></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+const apiBase = (window.BAWAXICT_CONFIG && window.BAWAXICT_CONFIG.familyHubApiBase) || '/api/familyhub/';
+
+function checkUsername() {
+  const name = document.getElementById('username').value.trim();
+  const status = document.getElementById('status');
+  if (name.length < 4) {
+    status.innerHTML = '';
+    return;
+  }
+  status.innerHTML = 'Checking availability...';
+  status.style.color = '#f28a19';
+  
+  fetch(apiBase + 'check-username?name=' + encodeURIComponent(name), {credentials:'include'})
+    .then(r => r.json())
+    .then(d => {
+      if (d.available) {
+        status.innerHTML = '✅ Available';
+        status.style.color = '#0b6b4f';
+      } else {
+        status.innerHTML = '❌ Name already exists. Please choose another name.';
+        status.style.color = '#b42318';
+      }
+    })
+    .catch(() => status.innerHTML = '✓ Looks good');
+}
+
+async function createProfile() {
+  const username = document.getElementById('username').value.trim();
+  const error = document.getElementById('error');
+  
+  if (username.length < 4) {
+    error.textContent = 'Username must be at least 4 characters';
+    return;
+  }
+
+  error.textContent = 'Creating your profile...';
+
+  try {
+    const res = await fetch('/api/familyhub/join', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ preferredName: username })
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      localStorage.setItem('bawaxict_username', username);
+      window.location.href = 'index.html';
+    } else {
+      error.textContent = data.error || 'This name already exists. Please choose another name.';
+    }
+  } catch(e) {
+    error.textContent = 'Connection error. Please try again.';
+  }
+}
+
+// Pre-fill if user already has a name
+try {
+  const saved = localStorage.getItem('bawaxict_username') || localStorage.getItem('familyhub_username');
+  if (saved) document.getElementById('username').value = saved;
+} catch(e){}
+</script>
+</body>
+</html>
