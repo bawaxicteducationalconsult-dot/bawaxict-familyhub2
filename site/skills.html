@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BAWAX ICT | Skill Hub</title>
+<link rel="stylesheet" href="css/bawaxict.css">
+<style>
+.page{max-width:1180px;margin:0 auto;padding:0 18px 30px}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid #e2ebe6}
+.topbar .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:#073b2c;font-weight:900;font-size:18px}
+.topbar .brand img{height:44px}
+.topbar .btn{text-decoration:none;padding:9px 18px;border-radius:9px;font-weight:700;font-size:13px;background:#073b2c;color:#fff}
+.hero{background:linear-gradient(135deg,#063c2c,#0b6b4f 60%,#15906d);color:#fff;padding:30px 28px;border-radius:16px;margin:20px 0}
+.hero .eyebrow{font-size:12px;font-weight:800;color:#f8c978}
+.hero h1{font-size:clamp(26px,5vw,40px);margin:8px 0}
+.hero p{font-size:13px;opacity:.85}
+.form-card{background:#fff;border:1px solid #e2ebe6;border-radius:14px;padding:20px;margin:16px 0}
+.form-card h3{margin:0 0 6px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.form-grid .full{grid-column:1/-1}
+.field{margin-bottom:8px}
+.field label{display:block;font-size:11px;font-weight:800;color:#54656f;margin-bottom:3px}
+.field input,.field textarea{width:100%;padding:9px 11px;border:1px solid #ccd5d2;border-radius:8px;font-size:13px;outline:0;font-family:inherit}
+.field textarea{min-height:60px;resize:vertical}
+.btn-primary{background:#073b2c;color:#fff;border:0;border-radius:9px;padding:10px 20px;font-weight:800;font-size:13px;cursor:pointer}
+.skill-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:10px}
+.skill-card{background:#fff;border:1px solid #e2ebe6;border-radius:14px;padding:18px}
+.skill-card .name{font-weight:900;font-size:16px;display:flex;justify-content:space-between}
+.skill-card .verified{background:#d9fdd3;color:#075e54;font-size:10px;border-radius:999px;padding:3px 10px}
+.skill-card .category{background:#f0f2f5;color:#073b2c;font-size:10px;border-radius:999px;padding:4px 10px;display:inline-block;margin:6px 0}
+.skill-card .desc{color:#6d7e76;font-size:12px;margin:8px 0}
+.skill-card .meta{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#6d7e76;margin-top:10px}
+.chat-btn{background:#075e54;color:#fff;border:0;border-radius:999px;padding:6px 14px;font-size:11px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-block}
+.empty{text-align:center;padding:40px;background:#fff;border-radius:16px;border:1px solid #e2ebe6;color:#6d7e76}
+.success{color:#118652;padding:10px;background:#d9fdd3;border-radius:8px;margin-top:10px;display:none}
+.error{color:#b42318;padding:10px;background:#ffe1de;border-radius:8px;margin-top:10px;display:none}
+@media(max-width:700px){.form-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <a class="brand" href="index.html"><img src="assets/bawaxict-logo.png" alt="BAWAX ICT"> BAWAX<span style="color:#f28a19">ICT</span></a>
+    <a class="btn" href="index.html">← Back</a>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">SKILL HUB</div>
+    <h1>Register Your Skill</h1>
+    <p>Share what you can do. Community members will find you and message you directly.</p>
+  </section>
+
+  <div class="form-card">
+    <h3>📝 Register</h3>
+    <form id="skillForm">
+      <div class="form-grid">
+        <div class="field full">
+          <label>Your Community Username</label>
+          <input id="sName" type="text" placeholder="Your chat username" required>
+        </div>
+        <div class="field full">
+          <label>Skill / Service</label>
+          <input id="sCategory" type="text" placeholder="e.g. Phone Repair, Tutoring" required>
+        </div>
+        <div class="field full">
+          <label>Description</label>
+          <textarea id="sDescription" placeholder="Describe what you offer..." required></textarea>
+        </div>
+      </div>
+      <button class="btn-primary" type="submit">Register Skill</button>
+      <div id="msg" class="success"></div>
+      <div id="err" class="error"></div>
+    </form>
+  </div>
+
+  <h2>📋 Skill Directory</h2>
+  <div id="skillList" class="skill-grid"><div class="empty">Loading...</div></div>
+</div>
+
+<script>
+(function(){
+  var form = document.getElementById('skillForm');
+  var list = document.getElementById('skillList');
+  var msg = document.getElementById('msg');
+  var err = document.getElementById('err');
+
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });}
+
+  function getUsername(){
+    try{
+      var x = JSON.parse(localStorage.getItem('bawaxict_identity') || 'null');
+      if(x && x.expires > Date.now()/1000 && x.username) return x.username;
+    }catch(e){}
+    return null;
+  }
+
+  function loadSkills(){
+    var x = new XMLHttpRequest();
+    x.open('GET', '/api/familyhub/skills', true);
+    x.onreadystatechange = function(){
+      if(x.readyState !== 4) return;
+      if(x.status >= 200 && x.status < 300){
+        try{
+          var data = JSON.parse(x.responseText);
+          var skills = data.skills || [];
+          if(!skills.length){
+            list.innerHTML = '<div class="empty">No skills registered yet. Be the first!</div>';
+            return;
+          }
+          list.innerHTML = skills.map(function(s){
+            return '<div class="skill-card">' +
+              '<div class="name">' + esc(s.name) + '</div>' +
+              '<span class="category">' + esc(s.category) + '</span>' +
+              '<div class="desc">' + esc(s.description) + '</div>' +
+              '<div class="meta">' +
+                '<span>👤 ' + esc(s.name) + '</span>' +
+                '<a class="chat-btn" href="skill-chat.html?owner=' + encodeURIComponent(s.name) + '">💬 Message</a>' +
+              '</div>' +
+            '</div>';
+          }).join('');
+        }catch(e){
+          list.innerHTML = '<div class="empty">Error loading skills</div>';
+        }
+      } else {
+        list.innerHTML = '<div class="empty">Could not load skills</div>';
+      }
+    };
+    x.send();
+  }
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    msg.style.display = 'none';
+    err.style.display = 'none';
+
+    var username = getUsername();
+    if(!username){
+      err.textContent = 'Please log in first. Go to Community Chat to create a username.';
+      err.style.display = 'block';
+      return;
+    }
+
+    var name = document.getElementById('sName').value.trim();
+    var category = document.getElementById('sCategory').value.trim();
+    var description = document.getElementById('sDescription').value.trim();
+
+    if(!name || !category || !description){
+      err.textContent = 'Please fill in all fields.';
+      err.style.display = 'block';
+      return;
+    }
+
+    var btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Registering...';
+
+    var x = new XMLHttpRequest();
+    x.open('POST', '/api/familyhub/skills', true);
+    x.setRequestHeader('Content-Type', 'application/json');
+    x.onreadystatechange = function(){
+      if(x.readyState !== 4) return;
+      btn.disabled = false;
+      btn.textContent = 'Register Skill';
+      if(x.status >= 200 && x.status < 300){
+        msg.textContent = '✅ Skill registered successfully!';
+        msg.style.display = 'block';
+        form.reset();
+        loadSkills();
+      } else {
+        try{
+          var data = JSON.parse(x.responseText);
+          err.textContent = data.error || 'Registration failed.';
+        }catch(e){
+          err.textContent = 'Registration failed. Please try again.';
+        }
+        err.style.display = 'block';
+      }
+    };
+    x.send(JSON.stringify({
+      name: name,
+      category: category,
+      description: description,
+      username: username
+    }));
+  });
+
+  // Auto-fill username if logged in
+  var user = getUsername();
+  if(user){
+    document.getElementById('sName').value = user;
+  }
+
+  loadSkills();
+})();
+</script>
+</body>
+</html>

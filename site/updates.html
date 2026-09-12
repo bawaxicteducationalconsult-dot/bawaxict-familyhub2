@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FamilyHub Community Updates</title>
+
+<link rel="stylesheet" href="css/bawaxict.css">
+
+<style>
+body{
+    background:#f5f7fb;
+}
+
+.updates-container{
+    max-width:900px;
+    margin:40px auto;
+    padding:20px;
+}
+
+.header-card{
+    background:white;
+    border-radius:18px;
+    padding:25px;
+    box-shadow:0 4px 20px rgba(0,0,0,.08);
+    margin-bottom:25px;
+}
+
+.back-btn{
+    display:inline-block;
+    text-decoration:none;
+    padding:10px 16px;
+    border-radius:10px;
+    background:#222;
+    color:white;
+    margin-bottom:20px;
+}
+
+.update-card{
+    background:white;
+    padding:18px;
+    margin-bottom:12px;
+    border-radius:14px;
+    display:flex;
+    gap:15px;
+    align-items:center;
+    box-shadow:0 3px 12px rgba(0,0,0,.06);
+}
+
+.icon{
+    font-size:30px;
+}
+
+.content strong{
+    display:block;
+    font-size:17px;
+}
+
+.time{
+    color:#777;
+    font-size:13px;
+}
+
+#loadMore{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    background:#1677ff;
+    color:white;
+    font-size:16px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="updates-container">
+
+<a class="back-btn" href="index.html">
+← Back to Dashboard
+</a>
+
+
+<div class="header-card">
+
+<h1>🌍 Community Updates</h1>
+
+<p>
+Stay connected with what is happening around FamilyHub.
+</p>
+
+</div>
+
+
+<div id="updatesList"></div>
+
+
+<button id="loadMore">
+Load More Updates
+</button>
+
+
+</div>
+
+
+<script>
+
+let offset = 0;
+let loadedIds = new Set();
+let loading = false;
+
+
+async function loadUpdates(){
+
+    if(loading) return;
+
+    loading = true;
+
+    const button = document.getElementById('loadMore');
+
+    button.innerText = "Loading...";
+
+
+    try{
+
+        const res = await fetch(
+            '/familyhub/api/community-activities'
+        );
+
+        const data = await res.json();
+
+
+        if(!data.activities || data.activities.length === 0){
+
+            button.innerText = "No more updates";
+
+            button.disabled = true;
+
+            return;
+
+        }
+
+
+        let newCount = 0;
+
+        const box=document.getElementById(
+            'updatesList'
+        );
+
+
+        data.activities.forEach(a=>{
+
+
+            if(loadedIds.has(a.id)){
+                return;
+            }
+
+
+            loadedIds.add(a.id);
+
+            newCount++;
+
+
+            let item=document.createElement(
+                'div'
+            );
+
+
+            item.className='update-card';
+
+
+            item.innerHTML=`
+
+            <div class="icon">
+            ${a.emoji || '🌍'}
+            </div>
+
+            <div class="content">
+
+            <strong>
+            ${a.username}
+            </strong>
+
+            <div>
+            ${a.actionText}
+            </div>
+
+            <div class="time">
+            Community Update
+            </div>
+
+            </div>
+
+            `;
+
+
+            box.appendChild(item);
+
+
+        });
+
+
+        if(newCount === 0){
+
+            button.innerText="No more updates";
+
+            button.disabled=true;
+
+        }
+        else{
+
+            button.innerText="Load More Updates";
+
+        }
+
+
+    }
+    catch(e){
+
+        console.log(e);
+
+        button.innerText="Try Again";
+
+    }
+
+
+    loading=false;
+
+}
+
+
+loadUpdates();
+
+document
+.getElementById('loadMore')
+.onclick=function(){
+
+    loadUpdates();
+
+};
+
+
+</script>
+
+
+</body>
+</html>

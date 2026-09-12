@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#073b2c">
+<title>BAWAXICT WIFI | Community Dashboard</title>
+<link rel="stylesheet" href="css/bawaxict.css">
+<link rel="stylesheet" href="css/mobile-safe.css">
+<script src="config.js"></script>
+<style>
+/* ============================================================
+   BAWAXICT FAMILYHUB — WEB LANDING / DASHBOARD PROTOTYPE
+   Based on the approved dashboard mockup.
+   WEB VERSION: hotspot-only purchase controls are intentionally
+   excluded from this page.
+   ============================================================ */
+:root{--dash-green:#073b2c;--dash-green2:#0b6b4f;--dash-green3:#15906d;--dash-orange:#f28a19;--dash-bg:#f5f8f6;--dash-line:#e2ebe6;--dash-text:#17352b;--dash-muted:#6d7e76;--dash-shadow:0 8px 26px rgba(7,59,44,.08)}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;min-height:100%;background:var(--dash-bg);color:var(--dash-text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+button{font:inherit}
+.dashboard{min-height:100vh;display:grid;grid-template-columns:258px minmax(0,1fr)}
+.sidebar{position:fixed;inset:0 auto 0 0;width:258px;background:linear-gradient(180deg,#052f23 0%,#073b2c 55%,#052e22 100%);color:#fff;padding:24px 18px 18px;display:flex;flex-direction:column;z-index:50;overflow-y:auto}
+.side-brand{text-align:center;padding:2px 8px 18px;border-bottom:1px solid rgba(255,255,255,.10)}
+.side-brand img{width:112px;height:auto;display:block;margin:0 auto 8px;filter:drop-shadow(0 7px 13px rgba(0,0,0,.18))}
+.side-brand .side-name{font-size:20px;font-weight:950;letter-spacing:.3px}.side-brand .side-name span{color:#f28a19}
+.side-brand small{display:block;margin-top:5px;color:rgba(255,255,255,.72);font-size:11px;line-height:1.4}
+.side-nav{display:grid;gap:5px;margin-top:18px}
+.side-link{display:flex;align-items:center;gap:13px;padding:12px 11px;border-radius:12px;color:rgba(255,255,255,.86);transition:.16s ease;font-size:13px;font-weight:800}
+.side-link:hover{background:rgba(255,255,255,.08);color:#fff;transform:translateX(1px)}
+.side-link.active{background:#10a35f;color:#fff;box-shadow:0 8px 18px rgba(0,0,0,.13)}
+.side-icon{width:26px;text-align:center;font-size:20px;line-height:1}.side-copy{display:flex;flex-direction:column;gap:2px}.side-copy small{font-size:9px;font-weight:500;color:rgba(255,255,255,.60)}
+.side-spacer{flex:1;min-height:16px}
+.logout{border:1px solid rgba(255,80,80,.85);background:rgba(0,0,0,.10);justify-content:center;color:#fff}.logout:hover{background:rgba(255,80,80,.13)}
+.invite{margin-top:10px;background:linear-gradient(135deg,#ed7c13,#f5a22d);border-radius:12px;padding:13px 12px;text-align:left;box-shadow:0 9px 22px rgba(0,0,0,.12)}
+.invite strong{display:block;font-size:15px}.invite span{display:block;font-size:10px;margin:3px 0 10px;color:#fff8eb}.invite a{display:inline-flex;background:#fff;color:#8d5008;border-radius:999px;padding:7px 12px;font-size:10px;font-weight:950}
+.main{grid-column:2;min-width:0;padding:0 22px 0}
+.topbar{height:76px;background:#fff;border-bottom:1px solid var(--dash-line);display:flex;align-items:center;justify-content:space-between;gap:18px;margin:0 -22px;padding:0 26px;position:sticky;top:0;z-index:30}
+.top-left{display:flex;align-items:center;gap:15px;min-width:0}.mobile-menu{display:none;border:0;background:transparent;font-size:25px;cursor:pointer;color:var(--dash-green)}
+.top-brand{display:flex;align-items:center;gap:12px}.top-brand img{width:47px;height:47px;object-fit:contain}.top-brand-text{font-size:20px;font-weight:950;color:#123d2f;letter-spacing:.2px}.top-brand-text span{color:var(--dash-orange)}.top-brand-sub{display:block;font-size:10px;color:var(--dash-muted);font-weight:600;margin-top:1px}
+.top-right{display:flex;align-items:center;gap:16px}.bell{position:relative;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:22px}.bell:hover{background:#f2f7f4}.profile{display:flex;align-items:center;gap:10px;border:1px solid #edf1ee;background:#fff;border-radius:30px;padding:7px 11px 7px 7px;cursor:pointer}.avatar{width:39px;height:39px;border-radius:50%;display:grid;place-items:center;background:#dcefe5;color:#0a7a50;font-size:23px}.profile b{display:block;font-size:12px}.profile small{display:block;color:var(--dash-muted);font-size:9px;margin-top:2px}.profile .chev{font-size:13px;margin-left:4px}
+.content{width:min(1180px,100%);margin:0 auto;padding:24px 0 0}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 285px;gap:22px;align-items:start}
+.welcome{min-height:258px;border-radius:18px;background:radial-gradient(circle at 78% 48%,rgba(31,157,111,.36),transparent 27%),linear-gradient(135deg,#052f23,#073b2c 58%,#0a6449);color:#fff;padding:28px 30px;position:relative;overflow:hidden;box-shadow:var(--dash-shadow)}
+.welcome:before{content:"";position:absolute;width:330px;height:330px;right:-100px;top:-175px;border-radius:50%;border:38px solid rgba(255,255,255,.045)}
+.welcome:after{content:"";position:absolute;width:220px;height:220px;right:55px;bottom:-150px;border-radius:50%;border:34px solid rgba(242,138,25,.10)}
+.welcome .eyebrow{font-size:12px;font-weight:800;color:#f8c978;position:relative;z-index:2}.welcome h1{font-size:29px;line-height:1.12;margin:10px 0 9px;letter-spacing:-.6px;position:relative;z-index:2}.welcome p{max-width:600px;margin:0;color:rgba(255,255,255,.80);font-size:12px;line-height:1.55;position:relative;z-index:2}
+.connect-mark{position:absolute;right:26px;top:24px;width:42px;height:42px;border-radius:50%;background:#fff;color:#15906d;display:grid;place-items:center;font-size:22px;font-weight:950;z-index:3;box-shadow:0 8px 22px rgba(0,0,0,.15)}
+.welcome-visual{position:absolute;right:36px;bottom:22px;width:210px;height:92px;opacity:.46;z-index:1}.node{position:absolute;width:16px;height:16px;border-radius:50%;background:#fff}.node:after{content:"";position:absolute;left:7px;top:7px;width:72px;height:1px;background:rgba(255,255,255,.5);transform-origin:left}.n1{left:5px;top:36px}.n2{left:66px;top:6px}.n3{left:66px;top:65px}.n4{right:8px;top:36px}.n5{left:100px;top:36px;width:28px;height:28px}.n5:after{display:none}
+.section-title{display:flex;justify-content:space-between;align-items:end;gap:10px;margin:23px 0 12px}.section-title h2{font-size:15px;margin:0;font-weight:950}.section-title p{margin:3px 0 0;color:var(--dash-muted);font-size:10px}.viewall{font-size:10px;font-weight:900;color:#158550}
+.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.quick{min-height:145px;border-radius:15px;color:#fff;padding:18px 13px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;box-shadow:var(--dash-shadow);transition:.16s ease}.quick:hover{transform:translateY(-3px);filter:brightness(1.04)}.quick.green{background:linear-gradient(150deg,#073b2c,#0b6b4f)}.quick.orange{background:linear-gradient(150deg,#ed7c13,#f5a22d)}.quick-icon{font-size:35px;line-height:1;margin-bottom:11px}.quick strong{font-size:12px;line-height:1.2}.quick small{font-size:9px;color:rgba(255,255,255,.78);margin-top:6px}.quick-arrow{margin-top:9px;width:28px;height:28px;background:#fff;color:#17352b;border-radius:50%;display:grid;place-items:center;font-weight:950}
+.activity{background:#fff;border:1px solid var(--dash-line);border-radius:15px;overflow:hidden;box-shadow:0 5px 18px rgba(7,59,44,.04)}.activity-row{min-height:68px;display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid #edf1ef}.activity-row:last-child{border-bottom:0}.activity-icon{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:19px;background:#e4f4ec;flex:0 0 auto}.activity-icon.orange{background:#fff0dd}.activity-text{min-width:0;flex:1}.activity-text strong{display:block;font-size:11px}.activity-text span{display:block;color:var(--dash-muted);font-size:10px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.activity-time{font-size:9px;color:var(--dash-muted);white-space:nowrap}.activity-arrow{font-size:17px;color:#789087}
+.right-stack{display:grid;gap:16px}.side-card{background:#fff;border:1px solid var(--dash-line);border-radius:15px;padding:17px;box-shadow:var(--dash-shadow)}.side-card h3{font-size:12px;margin:0 0 13px;font-weight:950;text-transform:uppercase;letter-spacing:.4px}.status-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid #edf1ef}.status-row:last-child{border-bottom:0;padding-bottom:0}.status-ico{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#e2f3e9;font-size:18px}.status-copy{flex:1}.status-copy small{display:block;color:var(--dash-muted);font-size:9px}.status-copy strong{display:block;font-size:11px;margin-top:2px}.check{width:22px;height:22px;border-radius:50%;background:#e2f3e9;color:#118652;display:grid;place-items:center;font-size:12px;font-weight:950}
+.access{background:linear-gradient(135deg,#f4fbf7,#fff);border:1px solid #e2eee8}.access-main{display:flex;align-items:center;gap:12px}.access-badge{width:46px;height:46px;border-radius:14px;background:#e0f2e8;display:grid;place-items:center;font-size:23px}.access strong{font-size:14px}.access p{margin:3px 0 0;color:var(--dash-muted);font-size:9px;line-height:1.45}.progress{height:8px;background:#e4eee9;border-radius:999px;overflow:hidden;margin-top:14px}.progress span{display:block;height:100%;width:82%;background:linear-gradient(90deg,#0b6b4f,#22aa73);border-radius:inherit}.access-note{font-size:9px;color:var(--dash-muted);margin-top:7px}
+.shortcut-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.shortcut{min-height:78px;border:1px solid #edf1ef;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:#fff;font-size:10px;font-weight:800;position:relative}.shortcut:hover{border-color:#a8cdbd;background:#f9fcfa}.shortcut i{font-style:normal;font-size:21px}.shortcut .badge{position:absolute;right:8px;top:7px;background:#ed7c13;color:#fff;min-width:18px;height:18px;padding:0 5px;border-radius:999px;display:grid;place-items:center;font-size:8px}
+.bottom-banner{margin-top:22px;min-height:108px;border-radius:17px;padding:22px 26px;background:radial-gradient(circle at 72% 45%,rgba(26,143,102,.4),transparent 26%),linear-gradient(110deg,#052f23,#073b2c 70%,#0a6b4f);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px;overflow:hidden;position:relative;box-shadow:var(--dash-shadow)}.bottom-banner:after{content:"";position:absolute;width:190px;height:190px;right:120px;top:-90px;border:26px solid rgba(255,255,255,.06);border-radius:50%}.banner-copy{position:relative;z-index:2}.banner-copy h2{margin:0;font-size:20px;line-height:1.1}.banner-copy h2 span{color:#fff}.banner-copy p{margin:6px 0 0;font-size:10px;color:rgba(255,255,255,.75)}.banner-btn{position:relative;z-index:3;flex:0 0 auto;background:#f28a19;color:#fff;border-radius:999px;padding:13px 21px;font-size:11px;font-weight:950;box-shadow:0 8px 18px rgba(0,0,0,.15)}
+.footer{margin:24px -22px 0;padding:25px max(26px,calc((100% - 1180px)/2));background:#052f23;color:#fff;display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:30px}.footer-brand{display:flex;gap:12px;align-items:flex-start}.footer-brand img{width:58px}.footer strong{font-size:14px}.footer strong span{color:#f28a19}.footer small,.footer p{display:block;color:rgba(255,255,255,.66);font-size:9px;line-height:1.55;margin:4px 0 0}.footer h4{margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:1px}.socials{display:flex;gap:8px}.socials a{width:30px;height:30px;border:1px solid rgba(255,255,255,.35);border-radius:50%;display:grid;place-items:center;font-size:12px}.copyright{grid-column:1/-1;border-top:1px solid rgba(255,255,255,.1);padding-top:13px;text-align:center;color:rgba(255,255,255,.55);font-size:9px}
+.overlay{display:none}
+@media(max-width:1120px){.dashboard{grid-template-columns:230px 1fr}.sidebar{width:230px}.quick-grid{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}.right-stack{grid-template-columns:repeat(3,1fr)}.right-stack .side-card{min-width:0}.welcome-visual{right:20px}}
+@media(max-width:760px){.dashboard{display:block}.sidebar{transform:translateX(-105%);transition:transform .22s ease;width:270px;box-shadow:10px 0 30px rgba(0,0,0,.2)}body.menu-open .sidebar{transform:translateX(0)}.overlay{display:block;position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:40;opacity:0;pointer-events:none;transition:.22s}.menu-open .overlay{opacity:1;pointer-events:auto}.main{padding:0 13px}.topbar{margin:0 -13px;padding:0 15px;height:68px}.mobile-menu{display:block}.top-brand-text{font-size:16px}.top-brand-sub{font-size:8px}.top-brand img{width:39px;height:39px}.profile .profile-copy,.profile .chev{display:none}.profile{padding:5px}.top-right{gap:6px}.content{padding-top:15px}.welcome{padding:24px 21px;min-height:235px}.welcome h1{font-size:25px;max-width:85%}.welcome p{font-size:11px;max-width:88%}.connect-mark{right:18px;top:18px}.welcome-visual{opacity:.22;right:-5px}.right-stack{grid-template-columns:1fr}.footer{margin-left:-13px;margin-right:-13px;padding:23px 18px;grid-template-columns:1fr}.copyright{grid-column:auto}.bottom-banner{align-items:flex-start;flex-direction:column}.banner-btn{width:100%;text-align:center}.side-brand img{width:100px}}
+@media(max-width:430px){.quick-grid{grid-template-columns:1fr 1fr;gap:8px}.quick{min-height:133px;padding:12px 7px}.quick-icon{font-size:29px}.quick strong{font-size:10px}.quick small{font-size:8px}.quick-arrow{width:25px;height:25px}.section-title{margin-top:18px}.activity-row{padding:9px 10px}.activity-time{display:none}.welcome h1{font-size:22px}.welcome p{font-size:10px}.welcome{min-height:250px}.top-brand-sub{display:none}.footer{gap:18px}}
+</style>
+</head>
+<body>
+<div class="overlay" id="overlay"></div>
+<div class="dashboard">
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="side-brand">
+      <img src="assets/bawaxict-logo.png" alt="BAWAX ICT Links-Zone">
+      <div class="side-name">BAWAX<span>ICT</span></div>
+      <small>Links-Zone<br>Smart Service, Professional Results</small>
+    </div>
+    <nav class="side-nav">
+      <a class="side-link active" href="#top"><span class="side-icon">⌂</span><span class="side-copy">Dashboard<small>Home</small></span></a>
+       <a class="side-link" href="community-chat.html"><span class="side-icon">♟</span><span class="side-copy">Community<small>Chat, Groups, Forum</small></span></a>
+       <a class="side-link" href="/private-chat"><span class="side-icon">💬</span><span class="side-copy">Private Chat<small>Direct member messages</small></span></a>
+      <a class="side-link" href="services.html"><span class="side-icon">⚒</span><span class="side-copy">Services<small>Find &amp; Request Services</small></span></a>
+      <a class="side-link" href="institute.html"><span class="side-icon">▰</span><span class="side-copy">Learning<small>Courses &amp; Tutorials</small></span></a>
+      <a class="side-link" href="#marketplace"><span class="side-icon">♧</span><span class="side-copy">Marketplace<small>Products &amp; Deals</small></span></a>
+      <a class="side-link" href="skills.html"><span class="side-icon">▣</span><span class="side-copy">Opportunities<small>Jobs &amp; Gigs</small></span></a>
+      <a class="side-link" href="games.html"><span class="side-icon">⌁</span><span class="side-copy">Entertainment<small>Games &amp; Fun</small></span></a>
+     
+      <a class="side-link" href="report.html"><span class="side-icon">◉</span><span class="side-copy">Support<small>Help &amp; Assistance</small></span></a>
+    </nav>
+    <div class="side-spacer"></div>
+    <a class="side-link logout" href="#logout" id="logoutBtn"><span class="side-icon">↪</span><span class="side-copy">Logout<small>End your session</small></span></a>
+    <div class="invite">
+      <strong>Invite &amp; Earn</strong><span>Invite friends and earn exciting rewards.</span>
+      <a href="community-chat.html">INVITE NOW</a>
+    </div>
+  </aside>
+
+  <main class="main" id="top">
+    <header class="topbar">
+      <div class="top-left">
+        <button class="mobile-menu" id="menuBtn" aria-label="Open menu">☰</button>
+        <a class="top-brand" href="#top">
+          <img src="assets/bawaxict-logo.png" alt="BAWAX ICT">
+          <span><span class="top-brand-text">BAWAXICT <span>WIFI</span></span><span class="top-brand-sub">Your Gateway To A Digital Community</span></span>
+        </a>
+      </div>
+      <div class="top-right">
+        <a class="bell" href="#notifications" aria-label="Notifications">♧</a>
+        <button class="profile" id="profileTrigger" type="button" aria-label="Open profile" style="border:0">
+  <span class="avatar" id="profileAvatar">●</span><span class="profile-copy"><b>Hello, <span id="userName">Member</span> 👋</b><small>Community Member</small></span><span class="chev">⌄</span>
+</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="layout">
+        <div>
+          <section class="welcome" aria-label="Welcome">
+            <div class="connect-mark">✓</div>
+            <div class="eyebrow">Welcome back, <span id="welcomeName">Member</span>! 👋</div>
+            <h1>Stay Connected.<br>Stay Empowered.</h1>
+            <p>You are connected to the BAWAXICT digital community. Explore services, learn new skills, meet people, get help and discover opportunities — all from one place.</p>
+            <div class="welcome-visual" aria-hidden="true"><i class="node n1"></i><i class="node n2"></i><i class="node n3"></i><i class="node n4"></i><i class="node n5"></i></div>
+          </section>
+
+          <div class="section-title"><div><h2>QUICK ACTIONS</h2><p>Jump straight into the things you use most.</p></div></div>
+          <section class="quick-grid" aria-label="Quick actions">
+            <a class="quick green" href="community-chat.html"><span class="quick-icon">♟</span><strong>ENTER<br>COMMUNITY</strong><small>Chat, Forum, Groups</small><span class="quick-arrow">→</span></a>
+            <a class="quick orange" href="services.html"><span class="quick-icon">⚒</span><strong>FIND<br>SERVICES</strong><small>Trusted Providers</small><span class="quick-arrow">→</span></a>
+            <a class="quick green" href="institute.html"><span class="quick-icon">▰</span><strong>LEARN<br>SKILLS</strong><small>Courses &amp; Tutorials</small><span class="quick-arrow">→</span></a>
+            <a class="quick orange" href="#updates"><span class="quick-icon">⚑</span><strong>COMMUNITY<br>UPDATES</strong><small>News &amp; Announcements</small><span class="quick-arrow">→</span></a>
+          </section>
+
+          <div class="section-title" id="updates"><div><h2>WHAT'S HAPPENING</h2><p>Useful places to continue from here.</p></div><a class="viewall" href="community-chat.html">View all</a></div>
+          <section class="activity" aria-label="What's happening">
+            <a class="activity-row" href="community-chat.html"><span class="activity-icon">♧</span><span class="activity-text"><strong>Community Discussions</strong><span>Join a conversation, ask a question or share useful knowledge.</span></span><span class="activity-time">Community</span><span class="activity-arrow">›</span></a>
+            <a class="activity-row" href="skills.html"><span class="activity-icon orange">●</span><span class="activity-text"><strong>Find Local Skills</strong><span>Discover people offering useful skills and services.</span></span><span class="activity-time">Skill Hub</span><span class="activity-arrow">›</span></a>
+            <a class="activity-row" href="institute.html"><span class="activity-icon">▰</span><span class="activity-text"><strong>Keep Learning</strong><span>Explore ICT training, guides and practical tutorials.</span></span><span class="activity-time">Learning</span><span class="activity-arrow">›</span></a>
+          </section>
+        </div>
+
+        <aside class="right-stack">
+          <section class="side-card">
+            <h3>Connection Status</h3>
+            <div class="status-row"><span class="status-ico">◉</span><span class="status-copy"><small>Status</small><strong>Online</strong></span><span class="check">✓</span></div>
+            <div class="status-row"><span class="status-ico">◷</span><span class="status-copy"><small>Session</small><strong>Active now</strong></span></div>
+            <div class="status-row"><span class="status-ico">▣</span><span class="status-copy"><small>Access</small><strong>Web Community</strong></span></div>
+          </section>
+
+          <section class="side-card access">
+            <h3>Community Access</h3>
+            <div class="access-main"><span class="access-badge">●</span><div><strong>Member Access</strong><p>Community, learning and smart services are available.</p></div></div>
+            <div class="progress" aria-label="Community access"><span></span></div>
+            <div class="access-note">Web platform • Cloud connected</div>
+          </section>
+
+         
+        </aside>
+      </div>
+
+      <section class="bottom-banner" id="marketplace">
+        <div class="banner-copy"><h2>Discover more.<br><span>Do more with FamilyHub.</span></h2><p>Community, skills, learning, services and opportunities — connected in one digital space.</p></div>
+        <a class="banner-btn" href="community-chat.html">EXPLORE COMMUNITY&nbsp; →</a>
+      </section>
+    </div>
+
+    <footer class="footer">
+      <div class="footer-brand"><img src="assets/bawaxict-logo.png" alt="BAWAX ICT"><div><strong>BAWAX<span>ICT</span></strong><small>Links-Zone<br>Smart Service, Professional Results</small><p>Your Gateway To A Digital Community</p></div></div>
+      <div><h4>Contact Us</h4><p>08033252255<br>08086375415<br>bawaxict.admin@gmail.com<br>Ilorin, Kwara State</p></div>
+      <div><h4>Follow Us</h4><div class="socials"><a href="https://wa.me/2348035252255" target="_blank" rel="noopener" aria-label="WhatsApp">W</a><a href="#" aria-label="Facebook">f</a><a href="#" aria-label="Telegram">✈</a><a href="#" aria-label="YouTube">▶</a></div><p>We are here to help with questions and support.</p></div>
+      <div class="copyright">© 2025 BAWAXICT Links-Zone. All rights reserved.</div>
+    </footer>
+  </main>
+</div>
+
+<script>
+(function(){
+  var body=document.body, menu=document.getElementById('menuBtn'), overlay=document.getElementById('overlay');
+  function closeMenu(){body.classList.remove('menu-open')}
+  if(menu) menu.addEventListener('click',function(){body.classList.toggle('menu-open')});
+  if(overlay) overlay.addEventListener('click',closeMenu);
+  document.querySelectorAll('.side-link').forEach(function(a){a.addEventListener('click',closeMenu)});
+
+  var params=new URLSearchParams(location.search);
+  var stored='';
+  try{stored=localStorage.getItem('bawaxict_username')||localStorage.getItem('familyhub_username')||''}catch(e){}
+  var name=(params.get('name')||stored||'Member').trim().replace(/[^A-Za-z0-9 _.-]/g,'').slice(0,24)||'Member';
+  document.getElementById('userName').textContent=name;
+  document.getElementById('welcomeName').textContent=name;
+
+      var logout=document.getElementById('logoutBtn');
+  if(logout) logout.addEventListener('click',function(e){
+    e.preventDefault();
+    fetch('/familyhub/api/logout',{method:'POST',credentials:'include'}).catch(function(){}).finally(function(){
+      try{
+        localStorage.removeItem('bawaxict_username');
+        localStorage.removeItem('familyhub_username');
+        localStorage.removeItem('bawaxict_identity');
+      }catch(err){}
+      location.reload();
+    });
+  });
+})();
+</script>
+  <style>
+#gateOverlay{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;place-items:center;padding:18px;z-index:200}
+#gateOverlay.show{display:grid}
+#gateOverlay .gate-card{width:min(420px,94vw);background:#fff;border-radius:16px;padding:24px;box-shadow:0 15px 50px rgba(0,0,0,.35);text-align:center;font-family:Inter,system-ui,sans-serif}
+#gateOverlay .gate-card h2{color:#073b2c;margin:6px 0 8px;font-size:20px}
+#gateOverlay .gate-card p{color:#6d7e76;font-size:13px;line-height:1.5;margin:0 0 14px}
+#gateOverlay input{width:100%;box-sizing:border-box;padding:12px;border:1px solid #ccd5d2;border-radius:9px;font-size:15px;outline:0}
+#gateOverlay .gate-btn{width:100%;margin-top:10px;padding:12px;border:0;border-radius:9px;background:#073b2c;color:#fff;font-weight:800;font-size:14px;cursor:pointer}
+#gateOverlay .gate-error{min-height:18px;color:#b42318;font-size:12px;margin-top:8px}
+#gateOverlay .gate-skip{display:inline-block;margin-top:12px;color:#6d7e76;font-size:12px;text-decoration:underline;cursor:pointer}
+</style>
+<div id="gateOverlay">
+  <div class="gate-card">
+    <h2>Join BAWAXICT Community</h2>
+    <p>Enter a username to access the community, services and everything else on this platform. This is saved on this device for 21 days.</p>
+    <input id="gateName" maxlength="24" placeholder="e.g. Tunde123" autocomplete="off">
+    <button class="gate-btn" id="gateJoinBtn" type="button">Continue</button>
+    <div class="gate-error" id="gateError"></div>
+    <span class="gate-skip" id="gateSkip">Just browsing — I'll register later</span>
+  </div>
+</div>
+   <div id="recoveryOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;place-items:center;padding:18px;z-index:210">
+  <div style="width:min(420px,94vw);background:#fff;border-radius:16px;padding:24px;box-shadow:0 15px 50px rgba(0,0,0,.35);text-align:center;font-family:Inter,system-ui,sans-serif">
+    <h2 style="color:#073b2c;margin:6px 0 8px;font-size:18px">Save Your Recovery Code</h2>
+    <p style="color:#6d7e76;font-size:13px;line-height:1.5;margin:0 0 14px">You'll need this to log back into <b id="recoveryUsername"></b> on another device. Write it down or copy it now — it won't be shown again.</p>
+    <input id="recoveryCodeBox" readonly style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #ccd5d2;border-radius:9px;font-size:16px;text-align:center;font-weight:800;letter-spacing:1px;background:#f5f8f6">
+    <button id="recoveryCopyBtn" type="button" style="width:100%;margin-top:10px;padding:12px;border:0;border-radius:9px;background:#073b2c;color:#fff;font-weight:800;font-size:14px;cursor:pointer">Copy Code</button>
+    <div id="recoveryCopyMsg" style="min-height:16px;color:#118652;font-size:12px;margin-top:6px"></div>
+    <button id="recoveryDoneBtn" type="button" style="width:100%;margin-top:8px;padding:11px;border:1px solid #ccd5d2;border-radius:9px;background:#fff;color:#073b2c;font-weight:700;font-size:13px;cursor:pointer">I've saved it — Continue</button>
+  </div>
+</div>
+   <div id="profilePanel" style="display:none;position:fixed; top:70px; right:20px;;z-index:220;background:#fff;border-radius:14px;box-shadow:0 15px 50px rgba(0,0,0,.25);width:min(300px,90vw);padding:18px;font-family:Inter,system-ui,sans-serif">
+  <div style="text-align:center">
+    <div id="profilePhotoWrap" style="width:76px;height:76px;border-radius:50%;background:#dcefe5;margin:0 auto 10px;display:grid;place-items:center;overflow:hidden;font-size:32px;color:#0a7a50">●</div>
+    <input type="file" id="profilePhotoInputCamera" accept="image/*" capture="environment" style="display:none">
+    <input type="file" id="profilePhotoInputGallery" accept="image/*" style="display:none">
+    <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+      <button id="profilePhotoBtnGallery" type="button" style="border:1px solid #ccd5d2;background:#fff;border-radius:999px;padding:6px 12px;font-size:11px;font-weight:700;color:#073b2c;cursor:pointer">🖼 Gallery</button>
+      <button id="profilePhotoBtnCamera" type="button" style="border:1px solid #ccd5d2;background:#fff;border-radius:999px;padding:6px 12px;font-size:11px;font-weight:700;color:#073b2c;cursor:pointer">📷 Camera</button>
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;justify-content:center;margin-top:8px;font-size:11px;color:#54656f;cursor:pointer">
+      <input type="checkbox" id="profileHidePhoto" style="min-height:auto;width:auto">Hide my photo (show avatar instead)
+    </label>
+    <div style="font-weight:900;font-size:19px;margin-top:10px;color:#073b2c;letter-spacing:.2px" id="profilePanelName">—</div>
+    <div style="font-size:11px;color:#118652;margin-top:2px">✓ Logged in</div>
+  </div>
+  <div style="margin-top:14px;text-align:left">
+    <label style="font-size:11px;font-weight:800;color:#54656f;display:block;margin-bottom:4px">Location</label>
+    <input id="profileLocation" placeholder="e.g. Lagos, Nigeria" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid #ccd5d2;border-radius:8px;font-size:13px;margin-bottom:10px">
+    <label style="font-size:11px;font-weight:800;color:#54656f;display:block;margin-bottom:4px">Sex (optional)</label>
+    <select id="profileSex" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid #ccd5d2;border-radius:8px;font-size:13px;margin-bottom:12px">
+      <option value="">Prefer not to say</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+    </select>
+    <label style="font-size:11px;font-weight:800;color:#54656f;display:block;margin-bottom:4px">Country</label>
+    <input id="profileCountry" placeholder="e.g. Nigeria" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid #ccd5d2;border-radius:8px;font-size:13px;margin-bottom:10px">
+    <label style="font-size:11px;font-weight:800;color:#54656f;display:block;margin-bottom:4px">State</label>
+    <input id="profileState" placeholder="e.g. Kwara" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid #ccd5d2;border-radius:8px;font-size:13px;margin-bottom:10px">
+    <label style="font-size:11px;font-weight:800;color:#54656f;display:block;margin-bottom:4px">WhatsApp</label>
+    <input id="profileWhatsapp" placeholder="e.g. 08012345678" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid #ccd5d2;border-radius:8px;font-size:13px;margin-bottom:10px">
+    <label style="font-size:11px;font-weight:800;color:#54656f;display:block;margin-bottom:4px">Social Link</label>
+    <input id="profileSocialLink" placeholder="e.g. instagram.com/you" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid #ccd5d2;border-radius:8px;font-size:13px;margin-bottom:12px">
+    <button id="profileSaveBtn" type="button" style="width:100%;padding:10px;border:0;border-radius:8px;background:#073b2c;color:#fff;font-weight:800;font-size:13px;cursor:pointer">Save</button>
+    <div id="profileSaveMsg" style="min-height:16px;font-size:11px;color:#118652;text-align:center;margin-top:6px"></div>
+  </div>
+</div>
+<script>
+(function(){
+  function hasIdentity(){
+    try{
+      var x=JSON.parse(localStorage.getItem('bawaxict_identity')||'null');
+      return !!(x && x.expires>Date.now()/1000 && x.username && x.clientId);
+    }catch(e){return false}
+  }
+    
+  function getClientId(){
+    try{
+      var c=localStorage.getItem('bawaxict_client_id')||'';
+      if(!c){c='browser-'+crypto.randomUUID();localStorage.setItem('bawaxict_client_id',c)}
+      return c;
+    }catch(e){return 'browser-'+Date.now()+'-'+Math.random().toString(16).slice(2)}
+  }
+     async function checkDeviceBinding(){
+    try{
+      var res=await fetch('/familyhub/api/device?client_id='+encodeURIComponent(getClientId()),{credentials:'include'});
+      return await res.json();
+    }catch(e){return null}
+  }
+  var overlay=document.getElementById('gateOverlay'), nameInput=document.getElementById('gateName'),
+      joinBtn=document.getElementById('gateJoinBtn'), errorBox=document.getElementById('gateError'),
+      skip=document.getElementById('gateSkip');
+  var pendingHref=null;
+  var gateShownAt=0;
+    function showGate(){gateShownAt=Date.now();overlay.classList.add('show');nameInput.focus()}
+  function hideGate(){overlay.classList.remove('show')}
+
+  async function doJoin(username, recoveryCode){
+    errorBox.textContent='';joinBtn.disabled=true;
+    try{
+      var body={username:username, client_id:getClientId()};
+      if(recoveryCode) body.recoveryCode=recoveryCode;
+     var res=await fetch('/familyhub/api/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'include'});
+      var data=await res.json();
+      if(!res.ok){
+        if(data.recoveryRequired){
+          var code=prompt('That username is already registered. Enter its recovery code to continue on this device, or press Cancel to choose a different name:');
+          if(code){await doJoin(username, code.trim());return}
+        }
+        errorBox.textContent=data.error||'Unable to join. Try a different username.';
+        return;
+      }
+      localStorage.setItem('bawaxict_identity', JSON.stringify({expires:data.identityExpires, username:data.username, clientId:body.client_id}));
+      try{localStorage.setItem('bawaxict_username', data.username)}catch(e){}
+            document.getElementById('userName').textContent=data.username;
+      document.getElementById('welcomeName').textContent=data.username;
+      if(data.recoveryCode){
+        hideGate();
+        var dest=pendingHref;pendingHref=null;
+        document.getElementById('recoveryUsername').textContent=data.username;
+        document.getElementById('recoveryCodeBox').value=data.recoveryCode;
+        document.getElementById('recoveryOverlay').style.display='grid';
+        document.getElementById('recoveryDoneBtn').onclick=function(){
+          document.getElementById('recoveryOverlay').style.display='none';
+          if(dest) location.href=dest;
+        };
+        document.getElementById('recoveryCopyBtn').onclick=function(){
+          var box=document.getElementById('recoveryCodeBox');
+          var msg=document.getElementById('recoveryCopyMsg');
+          box.focus(); box.select(); box.setSelectionRange(0,999);
+          function fallbackCopy(){
+            var ok=false;
+            try{ ok=document.execCommand('copy'); }catch(e){ ok=false; }
+            if(ok){
+              msg.style.color='#118652'; msg.textContent='Copied!';
+            }else{
+              msg.style.color='#b42318';
+              msg.textContent="Couldn't copy automatically — the code is selected, use your keyboard's copy option.";
+            }
+          }
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(box.value).then(function(){
+              msg.style.color='#118652'; msg.textContent='Copied!';
+            }).catch(fallbackCopy);
+          }else{
+            fallbackCopy();
+          }
+        };
+      }else{
+        hideGate();
+        if(pendingHref){var dest2=pendingHref;pendingHref=null;location.href=dest2}
+      }
+    }catch(e){
+      errorBox.textContent='Network error. Please try again.';
+    }finally{
+      joinBtn.disabled=false;
+    }
+  }
+
+   joinBtn.addEventListener('click', async function(){
+    var n=nameInput.value.trim();
+    if(!/^[A-Za-z0-9 _.-]{3,24}$/.test(n)){errorBox.textContent='Use 3–24 letters, numbers, spaces, dot, dash or underscore.';return}
+    var bind=await checkDeviceBinding();
+    if(bind && bind.bound && bind.username && bind.username.toLowerCase()!==n.toLowerCase()){
+      var wantsNew=confirm('This device is already registered as "'+bind.username+'".\n\nPress OK to create a brand-new separate account as "'+n+'" instead.\nPress Cancel to continue using your existing account "'+bind.username+'".');
+      if(!wantsNew){ doJoin(bind.username); return; }
+    }
+    doJoin(n);
+  });
+  nameInput.addEventListener('keydown', function(e){if(e.key==='Enter')joinBtn.click()});
+    skip.addEventListener('click', function(){ if(Date.now()-gateShownAt<1200) return; hideGate(); });
+
+   document.addEventListener('click', function(e){
+    var link=e.target.closest('a[href]');
+    if(link && link.getAttribute('href')==='community-chat.html' && hasIdentity()){
+      e.preventDefault();
+      location.href='/familyhub/';
+      return;
+    }
+    if(hasIdentity()) return;
+    if(e.target.closest('#gateOverlay')) return;
+    var el=e.target.closest('a, button');
+    if(!el) return;
+    if(el.id==='menuBtn') return;
+    e.preventDefault();
+    pendingHref = link ? link.getAttribute('href') : null;
+    showGate();
+  }, true);
+
+  if(!hasIdentity()) showGate();
+    
+})();
+</script>
+<script>
+(function(){
+  function familyhubUrl(p){return '/familyhub'+p}
+  var trigger=document.getElementById('profileTrigger'),
+      panel=document.getElementById('profilePanel'),
+      photoWrap=document.getElementById('profilePhotoWrap'),
+      photoInput=document.getElementById('profilePhotoInput'),
+      photoBtn=document.getElementById('profilePhotoBtn'),
+      nameEl=document.getElementById('profilePanelName'),
+      locInput=document.getElementById('profileLocation'),
+      sexSelect=document.getElementById('profileSex'),
+      countryInput=document.getElementById('profileCountry'),
+      stateInput=document.getElementById('profileState'),
+      whatsappInput=document.getElementById('profileWhatsapp'),
+      socialLinkInput=document.getElementById('profileSocialLink'),
+      hidePhotoBox=document.getElementById('profileHidePhoto'),
+      photoInputCamera=document.getElementById('profilePhotoInputCamera'),
+      photoInputGallery=document.getElementById('profilePhotoInputGallery'),
+      photoBtnCamera=document.getElementById('profilePhotoBtnCamera'),
+      photoBtnGallery=document.getElementById('profilePhotoBtnGallery'),
+      saveBtn=document.getElementById('profileSaveBtn'),
+      saveMsg=document.getElementById('profileSaveMsg'),
+      avatarSmall=document.getElementById('profileAvatar');
+
+  function hasIdentity(){
+    try{
+      var x=JSON.parse(localStorage.getItem('bawaxict_identity')||'null');
+      return !!(x && x.expires>Date.now()/1000 && x.username && x.clientId);
+    }catch(e){return false}
+  }
+
+  function avatarGlyphFor(sex){
+    if(sex==='Male') return '👨';
+    if(sex==='Female') return '👩';
+    return '●';
+  }
+  var currentPhotoId=null;
+  function setPhotoPreview(id,sex,hidden){
+    if(id && !hidden){
+      var url=familyhubUrl('/api/media/'+id);
+      photoWrap.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover">';
+      avatarSmall.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+    }else{
+      var g=avatarGlyphFor(sex);
+      photoWrap.textContent=g;
+      avatarSmall.textContent=g;
+    }
+  }
+
+  async function loadProfile(){
+    try{
+      var res=await fetch(familyhubUrl('/api/profile'),{credentials:'include'});
+      var data=await res.json();
+      if(!res.ok) return;
+      nameEl.textContent=data.username||'—';
+      locInput.value=data.location||'';
+      sexSelect.value=data.sex||'';
+      countryInput.value=data.country||'';
+      stateInput.value=data.state||'';
+      whatsappInput.value=data.whatsapp||'';
+      socialLinkInput.value=data.socialLink||'';
+      hidePhotoBox.checked=!!data.hidePhoto;
+      currentPhotoId=data.profilePhotoId||null;
+      setPhotoPreview(currentPhotoId,data.sex||'',!!data.hidePhoto);
+    }catch(e){}
+  }
+
+  function positionPanel(){
+    var r=trigger.getBoundingClientRect();
+    panel.style.top=(r.bottom+8)+'px';
+    var left=r.right-panel.offsetWidth;
+    if(left<10) left=10;
+    panel.style.left=left+'px';
+  }
+
+  function openPanel(){ panel.style.display='block'; positionPanel(); loadProfile(); }
+  function closePanel(){ panel.style.display='none'; saveMsg.textContent=''; }
+
+  if(trigger) trigger.addEventListener('click', function(e){
+    e.stopPropagation();
+    if(panel.style.display==='block') closePanel(); else openPanel();
+});
+
+  var sidebarProfileLink=document.getElementById('myProfileLink');
+  if(sidebarProfileLink) sidebarProfileLink.addEventListener('click', function(e){
+    e.preventDefault();
+    if(!hasIdentity()) return;
+    openPanel();
+  });
+
+  document.addEventListener('click', function(e){
+    if(panel.style.display==='block' && !panel.contains(e.target) && e.target!==trigger && !trigger.contains(e.target)){
+      closePanel();
+    }
+  });
+
+  if(photoBtnGallery) photoBtnGallery.addEventListener('click', function(){ photoInputGallery.click(); });
+  if(photoBtnCamera) photoBtnCamera.addEventListener('click', function(){ photoInputCamera.click(); });
+  async function uploadPhotoFile(file){
+    if(!file) return;
+    var fd=new FormData(); fd.append('file', file);
+    photoBtnGallery.disabled=true; photoBtnCamera.disabled=true;
+    var oldGalleryText=photoBtnGallery.textContent, oldCameraText=photoBtnCamera.textContent;
+    photoBtnGallery.textContent='Uploading…'; photoBtnCamera.textContent='Uploading…';
+    try{
+      var res=await fetch(familyhubUrl('/api/profile/photo'),{method:'POST',body:fd,credentials:'include'});
+      var data=await res.json();
+      if(res.ok && data.profilePhotoId){
+        hidePhotoBox.checked=false;
+        currentPhotoId=data.profilePhotoId;
+        setPhotoPreview(currentPhotoId,sexSelect.value,false);
+      }
+      else{ alert(data.error||'Unable to upload photo.'); }
+    }catch(e){ alert('Network error uploading photo.'); }
+    finally{
+      photoBtnGallery.disabled=false; photoBtnCamera.disabled=false;
+      photoBtnGallery.textContent=oldGalleryText; photoBtnCamera.textContent=oldCameraText;
+    }
+  }
+  if(photoInputGallery) photoInputGallery.addEventListener('change', function(){ uploadPhotoFile(photoInputGallery.files[0]); });
+  if(hidePhotoBox) hidePhotoBox.addEventListener('change', function(){ setPhotoPreview(currentPhotoId, sexSelect.value, hidePhotoBox.checked); });
+  if(photoInputCamera) photoInputCamera.addEventListener('change', function(){ uploadPhotoFile(photoInputCamera.files[0]); });
+
+  if(saveBtn) saveBtn.addEventListener('click', async function(){
+    saveBtn.disabled=true; saveMsg.textContent='';
+    try{
+      var res=await fetch(familyhubUrl('/api/profile'),{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({location:locInput.value.trim(),sex:sexSelect.value,country:countryInput.value.trim(),state:stateInput.value.trim(),whatsapp:whatsappInput.value.trim(),socialLink:socialLinkInput.value.trim(),hidePhoto:hidePhotoBox.checked})});
+      var data=await res.json();
+      if(res.ok){ setPhotoPreview(data.profilePhotoId!==undefined?data.profilePhotoId:null,sexSelect.value,hidePhotoBox.checked); saveMsg.style.color='#118652'; saveMsg.textContent='Saved!'; }
+      else{ saveMsg.style.color='#b42318'; saveMsg.textContent=data.error||'Unable to save.'; }
+    }catch(e){ saveMsg.style.color='#b42318'; saveMsg.textContent='Network error.'; }
+    finally{ saveBtn.disabled=false; }
+  });
+// Auto-open profile panel if URL has #profile
+if(window.location.hash === '#profile') {
+    setTimeout(function() {
+        var trigger = document.getElementById('profileTrigger');
+        if(trigger) trigger.click();
+    }, 500);
+}
+})();
+</script>
+</body>
+</html>
