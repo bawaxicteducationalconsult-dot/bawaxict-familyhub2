@@ -1,37 +1,37 @@
+
 <!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Cache-Control" content="no-store"><title>BAWAX ICT | Community Chat</title><link rel="stylesheet" href="css/bawaxict.css"><style>body{margin:0}.wrap{min-height:100vh;display:grid;place-items:center;padding:20px;background:#f4f7f6}.card{width:min(460px,94vw);background:#fff;border-radius:16px;padding:24px;box-shadow:0 12px 40px #0002;text-align:center}.card img{height:52px}.card h1{color:#075e54;font-size:24px;margin:12px 0 8px}.card p{color:#667781;line-height:1.5;font-size:14px}.card input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #ccd5d2;border-radius:9px;font-size:16px;outline:0}.btn{width:100%;margin-top:12px;padding:13px;border:0;border-radius:9px;background:#075e54;color:#fff;font-weight:800;font-size:15px;cursor:pointer}.back{display:inline-block;margin-top:12px;color:#075e54;text-decoration:none;font-size:13px}.err{min-height:18px;color:#b42318;font-size:12px;margin-top:8px}</style>  <link rel="stylesheet" href="css/mobile-safe.css">
-<script src="config.js"></script></head><body><div class="wrap"><div class="card"><img src="assets/bawaxict-logo.png" alt="BAWAX ICT"><h1>Community Chat</h1><p>Create your unique community username before entering FamilyHub Community. Your username is reserved to you for <b>21 days</b> and cannot be changed before then.</p><input id="name" maxlength="24" autocomplete="nickname" placeholder="Enter a unique username"><button class="btn" id="go">Continue to FamilyHub Community</button><div class="err" id="err"></div><a class="back" id="skip" href="#">Already chatted here before? Continue as returning member →</a><br><a class="back" id="back" href="index.html">← Return to Portal</a></div></div><script>(function(){const name=document.getElementById('name'),go=document.getElementById('go'),err=document.getElementById('err'),skip=document.getElementById('skip');const base=(window.BAWAXICT_CONFIG&&window.BAWAXICT_CONFIG.familyHubBase)||'/familyhub/';let stored='';try{stored=localStorage.getItem('bawaxict_username')||localStorage.getItem('familyhub_username')||''}catch(e){}if(stored.trim())name.value=stored.trim().slice(0,24)// Auto-login if username is already stored
-// Auto-login if username is already stored
-// Also support hotspot users who may have a device binding
-if(stored.trim()) {
-    // Hide the card and show a loading message
-    document.querySelector('.card').style.display = 'none';
-    document.querySelector('.wrap').innerHTML = '<div style="text-align:center;color:#075e54;font-size:18px;font-weight:bold;">⏳ Logging you in...</div>';
-    setTimeout(function() {
-        document.getElementById('go').click();
-    }, 200);
-}
-} ;function valid(v){return /^[A-Za-z0-9 _.-]{3,24}$/.test(v)}go.onclick=function(){
-    const n=name.value.trim();
-    if(!valid(n)){err.textContent='Use 3–24 letters, numbers, spaces, dot, dash or underscore.';return}
-    
-    // Check if this device already has an account
+<script src="config.js"></script></head><body><div class="wrap"><div class="card"><img src="assets/bawaxict-logo.png" alt="BAWAX ICT"><h1>Community Chat</h1><p>Create your unique community username before entering FamilyHub Community. Your username is reserved to you for <b>21 days</b> and cannot be changed before then.</p><input id="name" maxlength="24" autocomplete="nickname" placeholder="Enter a unique username"><button class="btn" id="go">Continue to FamilyHub Community</button><div class="err" id="err"></div><a class="back" id="skip" href="#">Already chatted here before? Continue as returning member →</a><br><a class="back" id="back" href="index.html">← Return to Portal</a></div></div><script>(function(){
+  const name=document.getElementById('name'), goBtn=document.getElementById('go'), err=document.getElementById('err'), skip=document.getElementById('skip');
+  const base=(window.BAWAXICT_CONFIG&&window.BAWAXICT_CONFIG.familyHubBase)||'/familyhub/';
+
+  function valid(v){return /^[A-Za-z0-9 _.-]{3,24}$/.test(v)}
+
+  function proceed(n){
+    if(!valid(n)){ if(err) err.textContent='Use 3–24 letters, numbers, spaces, dot, dash or underscore.'; return; }
     const existingUsername = localStorage.getItem('bawaxict_username') || localStorage.getItem('familyhub_username') || '';
-    
-    if(existingUsername && existingUsername.toLowerCase() !== n.toLowerCase()) {
-        // Device already has a different username - ask what to do
-        if(!confirm('This device is already registered as "' + existingUsername + '".\n\nDo you want to:\n- Click OK to switch to "' + n + '" (you will need the recovery code)\n- Click Cancel to keep using "' + existingUsername + '"')) {
-            // User cancelled - keep existing account
-            name.value = existingUsername;
-            return;
-        }
+    if(existingUsername && existingUsername.toLowerCase() !== n.toLowerCase()){
+      if(!confirm('This device is already registered as "'+existingUsername+'".\n\nDo you want to:\n- Click OK to switch to "'+n+'" (you will need the recovery code)\n- Click Cancel to keep using "'+existingUsername+'"')){
+        name.value = existingUsername;
+        return;
+      }
     }
-    
-    go.disabled=true;
-    go.textContent='Opening FamilyHub…';
+    if(goBtn){ goBtn.disabled=true; goBtn.textContent='Opening FamilyHub…'; }
     location.href='forum.html?preferredName='+encodeURIComponent(n);
-};
-// Returning members: this device is already bound to one community username
-// for 21 days, so skip typing a name here — FamilyHub recognizes the device
-// automatically and logs the same member straight back in.
-skip.onclick=function(e){e.preventDefault();skip.textContent='Opening FamilyHub…';location.href=base+''};
+  }
+
+  let stored='';
+  try{ stored = localStorage.getItem('bawaxict_username') || localStorage.getItem('familyhub_username') || ''; }catch(e){}
+  if(stored.trim()) name.value = stored.trim().slice(0,24);
+
+  if(stored.trim()){
+    document.querySelector('.card').style.display='none';
+    const loading=document.createElement('div');
+    loading.style.cssText='text-align:center;color:#075e54;font-size:18px;font-weight:bold;';
+    loading.textContent='⏳ Logging you in...';
+    document.querySelector('.wrap').appendChild(loading);
+    setTimeout(function(){ proceed(stored.trim()); }, 200);
+  }
+
+  goBtn.onclick=function(){ proceed(name.value.trim()); };
+  skip.onclick=function(e){ e.preventDefault(); skip.textContent='Opening FamilyHub…'; location.href=base+''; };
 })();</script></body></html>
