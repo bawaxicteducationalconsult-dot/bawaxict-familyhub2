@@ -590,7 +590,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if not allowed and m['attached_message_id']:
                 allowed=bool(con.execute('SELECT 1 FROM private_messages pm WHERE pm.id=? AND (pm.sender_id=? OR pm.recipient_id=?)',(m['attached_message_id'],user['id'],user['id'])).fetchone())
             if not allowed:
-                allowed=bool(con.execute('SELECT 1 FROM users WHERE profile_media_id=?',(m['id'],)).fetchone())
+                owner=con.execute('SELECT hide_photo FROM users WHERE profile_media_id=?',(m['id'],)).fetchone()
+                allowed=bool(owner) and not owner['hide_photo']
             if not allowed: con.close(); send_json(self,{'error':'You are not authorized to access this media.'},403); return
             fp=MEDIA_DIR/m['storage_name']
             if not fp.exists(): con.close(); send_json(self,{'error':'Media file is unavailable.'},404); return
@@ -834,6 +835,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
                 pm=con.execute('SELECT id FROM media WHERE id=?',(user['profile_media_id'],)).fetchone() if user['profile_media_id'] else None
                 con.close(); send_json(self,{'username':user['username'],'hidden':bool(user['hidden']),'identityExpires':user['identity_expires'],'hotspotUser':bool(user['hotspot_user']),'usernameChangedAt':int(user['username_changed_at'] or 0),'usernameChangeAvailableAt':int(user['username_change_available_at'] or 0),'usernameChangeAvailable':int(user['username_change_available_at'] or 0) <= int(time.time()),'location':user['location'] or '','sex':user['sex'] or '','country':user['country'] or '','state':user['state'] or '','whatsapp':user['whatsapp'] or '','socialLink':user['social_link'] or '','hidePhoto':bool(user['hide_photo']),'profilePhotoId':(None if user['hide_photo'] else (pm['id'] if pm else None))}); return
+            if path=='/api/profile/public':
+                target=params.get('username',[''])[0].strip()
+                if not target: con.close(); send_json(self,{'error':'Missing username.'},400); return
+                u=con.execute('SELECT * FROM users WHERE lower(username)=lower(?)',(target,)).fetchone()
+                if not u: con.close(); send_json(self,{'error':'User not found.'},404); return
+                pm=con.execute('SELECT id FROM media WHERE id=?',(u['profile_media_id'],)).fetchone() if u['profile_media_id'] else None
+                con.close()
+                send_json(self,{'username':u['username'],'location':u['location'] or '','sex':u['sex'] or '','country':u['country'] or '','state':u['state'] or '','profilePhotoId':(None if u['hide_photo'] else (pm['id'] if pm else None))})
+                return
             if path=='/api/blocks':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
                 rows=con.execute('SELECT u.username FROM blocks b JOIN users u ON u.id=b.blocked_id WHERE b.blocker_id=? ORDER BY lower(u.username)',(user['id'],)).fetchall(); con.close(); send_json(self,{'users':[r['username'] for r in rows]}); return

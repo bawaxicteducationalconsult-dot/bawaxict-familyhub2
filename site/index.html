@@ -3,86 +3,605 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BAWAXICT FamilyHub</title>
-<link rel="stylesheet" href="css/familyhub-social.css">
+<meta name="theme-color" content="#123B2C">
+<title>BAWAXICT FamilyHub | Community</title>
+<link rel="stylesheet" href="css/bawaxict.css">
+<link rel="stylesheet" href="css/mobile-safe.css">
 <script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   BAWAXICT FAMILYHUB — SOCIAL FEED HOME
+   Visual system from the approved mockup (screens 1 & 3).
+   Functional layer (gate/join, profile, recovery, activity feed,
+   hotspot-return, logout) ported unchanged from the live
+   site/index.html — do not remove IDs referenced by the scripts
+   at the bottom of this file.
+   ============================================================ */
+:root{
+  --green-900:#123B2C;--green-700:#1D6B4C;--green-600:#22885F;--green-500:#2CA671;--green-100:#E4F3EA;
+  --orange-600:#E8720F;--orange-500:#F5871F;--orange-100:#FDE9D3;
+  --bg:#F6F4EE;--card:#FFFFFF;--ink-900:#1B1F1C;--ink-700:#454B47;--ink-500:#6E7570;--ink-300:#AEB4AF;
+  --border:#E7E3D9;--shadow:0 1px 2px rgba(18,59,44,.04),0 6px 20px rgba(18,59,44,.06);
+  --radius-lg:18px;--radius-md:14px;--radius-sm:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;min-height:100%;background:var(--bg);color:var(--ink-900);font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased}
+body{overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+button{font:inherit;cursor:pointer;border:0;background:none}
+img{display:block;max-width:100%}
+
+.shell{display:grid;grid-template-columns:248px 1fr 300px;max-width:1360px;margin:0 auto;min-height:100vh}
+@media (max-width:1100px){.shell{grid-template-columns:220px 1fr}.rail-right{display:none}}
+@media (max-width:860px){.shell{grid-template-columns:1fr}.rail-left{display:none}}
+
+/* left rail */
+.rail-left{padding:22px 16px;display:flex;flex-direction:column;gap:22px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px}
+.brand-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(160deg,var(--green-600),var(--green-900));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;flex-shrink:0;overflow:hidden}
+.brand-mark img{width:100%;height:100%;object-fit:cover}
+.brand-name{display:flex;flex-direction:column;line-height:1.15}
+.brand-name b{font-size:14.5px;font-weight:800;color:var(--green-900)}
+.brand-name span{font-size:11px;color:var(--ink-500);font-weight:600}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:var(--radius-sm);color:var(--ink-700);font-size:14px;font-weight:600}
+.nav-item:hover{background:var(--green-100);color:var(--green-900)}
+.nav-item.active{background:var(--green-700);color:#fff}
+.nav-item .ic{width:19px;text-align:center;flex-shrink:0;font-size:16px}
+.rail-spacer{flex:1}
+.wifi-card{display:flex;align-items:center;gap:10px;background:var(--green-100);border:1px solid #CFEBDA;border-radius:var(--radius-md);padding:12px 13px;font-size:12px;font-weight:700;color:var(--green-900)}
+.wifi-dot{width:8px;height:8px;border-radius:50%;background:var(--green-500);flex-shrink:0;box-shadow:0 0 0 3px rgba(44,166,113,.25)}
+.sidebar-foot{display:flex;flex-direction:column;gap:6px}
+.hotspot-return{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:700;color:var(--orange-600);background:var(--orange-100)}
+.logout-link{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:700;color:#B4372A}
+.logout-link:hover{background:#FBEAE8}
+
+/* main */
+.main{border-left:1px solid var(--border);border-right:1px solid var(--border);min-height:100vh}
+.topbar{display:flex;align-items:center;gap:14px;padding:16px 24px;border-bottom:1px solid var(--border);background:rgba(246,244,238,.85);backdrop-filter:blur(6px);position:sticky;top:0;z-index:20}
+.search{flex:1;display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:10px 16px;color:var(--ink-500);font-size:13.5px}
+.search svg{width:16px;height:16px;flex-shrink:0}
+.icon-btn{position:relative;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--card);border:1px solid var(--border);flex-shrink:0}
+.icon-btn svg{width:18px;height:18px;color:var(--ink-700)}
+.badge-dot{position:absolute;top:7px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--orange-600);border:1.5px solid var(--card)}
+.avatar{width:38px;height:38px;border-radius:50%;flex-shrink:0;background:linear-gradient(160deg,#F5A45F,var(--orange-600));color:#fff;font-weight:800;font-size:13.5px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover}
+
+.feed-scroll{padding:20px 24px 60px;display:flex;flex-direction:column;gap:18px}
+
+.hero{position:relative;overflow:hidden;border-radius:var(--radius-lg);padding:26px;color:#fff;background:linear-gradient(120deg,var(--green-900) 0%,var(--green-700) 55%,var(--green-600) 100%);display:flex;align-items:center;justify-content:space-between;gap:20px}
+.hero::after{content:"";position:absolute;right:-40px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.10),transparent 70%)}
+.hero-text h1{margin:0 0 6px;font-size:21px;font-weight:800}
+.hero-text p{margin:0;font-size:13.5px;color:rgba(255,255,255,.82)}
+.hero-cta{background:var(--orange-600);color:#fff;padding:11px 20px;border-radius:999px;font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:7px;flex-shrink:0;white-space:nowrap;box-shadow:0 6px 16px rgba(232,114,15,.35)}
+
+.tabs{display:flex;gap:8px}
+.tab{padding:8px 16px;border-radius:999px;font-size:13px;font-weight:700;color:var(--ink-500);background:var(--card);border:1px solid var(--border)}
+.tab.active{background:var(--green-900);color:#fff;border-color:var(--green-900)}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow)}
+.composer{padding:16px 18px}
+.composer-top{display:flex;align-items:center;gap:12px}
+.composer-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:11px 16px;font-size:13.5px;color:var(--ink-500);text-align:left}
+.composer-actions{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.composer-opts{display:flex;gap:6px}
+.composer-opt{display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--ink-700)}
+.composer-opt:hover{background:var(--bg)}
+.post-btn{background:var(--green-700);color:#fff;padding:9px 20px;border-radius:999px;font-size:13px;font-weight:700}
+
+.post{padding:16px 18px}
+.post-head{display:flex;align-items:center;gap:11px}
+.post-head .avatar{width:40px;height:40px;font-size:13px}
+.post-who{display:flex;flex-direction:column;line-height:1.3}
+.post-who b{font-size:13.5px;font-weight:700}
+.post-who .meta{font-size:11.5px;color:var(--ink-500)}
+.post-body{margin:12px 0 0;font-size:13.8px;line-height:1.55}
+.post-foot{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.post-foot a{font-size:12.5px;font-weight:700;color:var(--green-700)}
+
+/* right rail */
+.rail-right{padding:20px 18px;display:flex;flex-direction:column;gap:16px;position:sticky;top:0;height:100vh;overflow:auto}
+.rr-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:16px}
+.rr-title{font-size:13.5px;font-weight:800;margin-bottom:10px}
+.status-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px}
+.status-row:last-child{border-bottom:0;padding-bottom:0}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green-500);flex-shrink:0}
+.status-row b{margin-left:auto;font-size:12px}
+.hotspot-cta{display:block;text-align:center;margin-top:10px;background:var(--green-900);color:#fff;padding:9px;border-radius:999px;font-size:12px;font-weight:700}
+
+/* mobile */
+.m-top{display:none}
+@media (max-width:860px){
+  .m-top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:20}
+  .m-top .actions{display:flex;align-items:center;gap:8px}
+  .m-top .icon-btn{width:34px;height:34px}
+  .m-top .avatar{width:34px;height:34px;font-size:12px}
+  .topbar{display:none}
+  .feed-scroll{padding:14px 14px 90px}
+  .hero{padding:20px 18px;flex-direction:column;align-items:flex-start;gap:16px}
+}
+.bottom-nav{display:none}
+@media (max-width:860px){
+  .bottom-nav{display:flex;justify-content:space-around;align-items:center;position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:9px 6px calc(9px + env(safe-area-inset-bottom));z-index:30}
+  .bn-item{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-500);font-size:10px;font-weight:700}
+  .bn-item svg{width:21px;height:21px}
+  .bn-item.active{color:var(--green-700)}
+  .bn-fab{width:42px;height:42px;border-radius:14px;background:var(--green-700);color:#fff;display:flex;align-items:center;justify-content:center;margin-top:-22px;box-shadow:0 6px 14px rgba(29,107,76,.35)}
+  .bn-fab svg{width:20px;height:20px}
+}
+
+/* ---- ported overlays (gate / recovery / profile) restyled to new tokens ---- */
+#gateOverlay,#recoveryOverlay{position:fixed;inset:0;background:rgba(18,26,22,.62);display:none;place-items:center;padding:18px;z-index:200}
+#gateOverlay.show{display:grid}
+.gate-card{width:min(420px,94vw);background:#fff;border-radius:20px;padding:26px;box-shadow:0 20px 60px rgba(18,59,44,.28);text-align:center}
+.gate-card h2{color:var(--green-900);margin:6px 0 8px;font-size:20px;font-weight:800}
+.gate-card p{color:var(--ink-500);font-size:13px;line-height:1.5;margin:0 0 16px}
+.gate-card input{width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--border);border-radius:12px;font-size:15px;outline:0;font-family:inherit}
+.gate-btn{width:100%;margin-top:10px;padding:12px;border-radius:999px;background:var(--green-700);color:#fff;font-weight:700;font-size:14px}
+.gate-error{min-height:18px;color:#B4372A;font-size:12px;margin-top:8px}
+.gate-skip{display:inline-block;margin-top:12px;color:var(--ink-500);font-size:12px;text-decoration:underline;cursor:pointer}
+
+#profilePanel{display:none;position:fixed;top:70px;right:20px;z-index:220;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(18,59,44,.25);width:min(320px,90vw);padding:20px;max-height:85vh;overflow:auto}
+#profilePhotoWrap{width:76px;height:76px;border-radius:50%;background:var(--green-100);margin:0 auto 10px;display:grid;place-items:center;overflow:hidden;font-size:30px;color:var(--green-700)}
+.pp-photo-btn{border:1px solid var(--border);background:#fff;border-radius:999px;padding:7px 13px;font-size:11px;font-weight:700;color:var(--green-900)}
+.pp-field label{font-size:11px;font-weight:700;color:var(--ink-500);display:block;margin:10px 0 4px}
+.pp-field input,.pp-field select{width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit}
+#profileSaveBtn{width:100%;margin-top:14px;padding:11px;border-radius:999px;background:var(--green-700);color:#fff;font-weight:700;font-size:13px}
+</style>
 </head>
 <body>
 
-<div class="connection-bar">
-  <span>✅ Connected to BAWAXICT WIFI</span>
-  <span style="margin-left:auto; font-size:13px;">12 people active now</span>
+<div class="shell">
+  <aside class="rail-left" id="sidebar" aria-label="Main navigation">
+    <div class="brand">
+      <div class="brand-mark"><img src="assets/bawaxict-logo.png" alt="BAWAXICT" onerror="this.parentElement.textContent='BX'"></div>
+      <div class="brand-name"><b>BAWAXICT</b><span>FamilyHub</span></div>
+    </div>
+
+    <nav class="nav">
+      <a class="nav-item active" href="index.html"><span class="ic">⌂</span>Home</a>
+      <a class="nav-item" href="community-chat.html"><span class="ic">♟</span>Forum &amp; Chat</a>
+      <a class="nav-item" href="/marketplace.html"><span class="ic">♧</span>Marketplace</a>
+      <a class="nav-item" href="services.html"><span class="ic">⚒</span>Services</a>
+      <a class="nav-item" href="institute.html"><span class="ic">▰</span>Learning</a>
+      <a class="nav-item" href="skills.html"><span class="ic">▣</span>Opportunities</a>
+      <a class="nav-item" href="games.html"><span class="ic">⌁</span>Entertainment</a>
+      <a class="nav-item" href="report.html"><span class="ic">◉</span>Support</a>
+    </nav>
+
+    <div class="rail-spacer"></div>
+
+    <div class="wifi-card"><span class="wifi-dot"></span>Connected · BAWAXICT WiFi</div>
+    <div class="sidebar-foot">
+      <a class="hotspot-return" href="http://bawaxict.edu.net/status" title="Return to BAWAXICT WIFI hotspot page">↩ Back to Hotspot</a>
+      <a class="logout-link" href="#logout" id="logoutBtn">↪ Logout</a>
+    </div>
+  </aside>
+
+  <main class="main" id="top">
+    <div class="m-top">
+      <div class="brand"><div class="brand-mark"><img src="assets/bawaxict-logo.png" alt="BAWAXICT" onerror="this.parentElement.textContent='BX'"></div><div class="brand-name"><b>BAWAXICT</b></div></div>
+      <div class="actions">
+        <a class="icon-btn" href="http://bawaxict.edu.net/status" title="Back to Hotspot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg></a>
+        <button class="icon-btn" id="profileTrigger" type="button" aria-label="Profile"><span class="avatar" id="profileAvatar" style="width:100%;height:100%">●</span></button>
+      </div>
+    </div>
+
+    <div class="topbar">
+      <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Search posts, people, groups, or topics…</div>
+      <a class="icon-btn" href="http://bawaxict.edu.net/status" title="Back to Hotspot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg></a>
+      <button class="icon-btn" id="profileTriggerDesktop" type="button" aria-label="Profile"><span class="avatar" id="profileAvatarDesktop">●</span></button>
+    </div>
+
+    <div class="feed-scroll">
+      <div class="hero">
+        <div class="hero-text">
+          <h1>Good morning, <span id="welcomeName">Member</span></h1>
+          <p>Here's what's happening around FamilyHub</p>
+        </div>
+        <button class="hero-cta"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Create</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active">For You</button>
+        <button class="tab">Trending</button>
+      </div>
+
+      <div class="card composer">
+        <div class="composer-top">
+          <span class="avatar" id="composerAvatar">●</span>
+          <div class="composer-input">What's on your mind, <span id="composerName">Member</span>?</div>
+        </div>
+        <div class="composer-actions">
+          <div class="composer-opts">
+            <span class="composer-opt">📷 Photo</span>
+            <span class="composer-opt">📢 Notice</span>
+          </div>
+          <button class="post-btn" id="composerPostBtn">Post</button>
+        </div>
+      </div>
+
+      <section id="familyhub-activity-feed">
+        <div class="card post">
+          <div class="post-head"><span class="avatar">🌍</span>
+            <div class="post-who"><b>FamilyHub Live Community</b><span class="meta">Loading latest activity…</span></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <aside class="rail-right">
+    <div class="rr-card">
+      <div class="rr-title">Connection Status</div>
+      <div class="status-row"><span class="status-dot"></span>Status<b>Online</b></div>
+      <div class="status-row"><span class="status-dot"></span>Access<b id="accessTypeLabel">Web Community</b></div>
+      <a class="hotspot-cta" href="http://bawaxict.edu.net/status">Back to Hotspot →</a>
+    </div>
+    <div class="rr-card">
+      <div class="rr-title">Invite &amp; Earn</div>
+      <p style="font-size:12.5px;color:var(--ink-500);margin:0 0 10px;">Invite friends and earn rewards.</p>
+      <a class="hotspot-cta" style="background:var(--orange-600)" href="community-chat.html">Invite Now →</a>
+    </div>
+  </aside>
 </div>
 
-<div class="top-nav">
-  <div class="logo">BAWAX<span>ICT</span> FamilyHub</div>
-  <input type="text" class="search" placeholder="Search posts, people, groups...">
-  <div style="display:flex; gap:16px; font-size:24px; align-items:center;">
-    <span onclick="logout()" style="cursor:pointer; font-size:20px;">↪</span>
-    <span>👤</span>
+<nav class="bottom-nav">
+  <a class="bn-item active" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Home</a>
+  <a class="bn-item" href="community-chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Chat</a>
+  <a class="bn-fab" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></a>
+  <a class="bn-item" href="/marketplace.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v10H3z"/></svg>Market</a>
+  <button class="bn-item" id="meTabBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Me</button>
+</nav>
+
+<!-- =========== PORTED FUNCTIONAL OVERLAYS (unchanged logic) =========== -->
+<div id="gateOverlay">
+  <div class="gate-card">
+    <h2>Join BAWAXICT Community</h2>
+    <p>Enter a username to access the community, services and everything else on this platform. This is saved on this device for 21 days.</p>
+    <input id="gateName" maxlength="24" placeholder="e.g. Tunde123" autocomplete="off">
+    <button class="gate-btn" id="gateJoinBtn" type="button">Continue — Enter Community Free</button>
+    <div class="gate-error" id="gateError"></div>
+    <span class="gate-skip" id="gateSkip">Just browsing — I'll register later</span>
   </div>
 </div>
 
-<div class="greeting">
-  <h1>Good morning, <span id="userName">Member</span> 👋</h1>
-  <p>Here's what's happening around FamilyHub</p>
+<div id="recoveryOverlay">
+  <div class="gate-card">
+    <h2 style="font-size:18px">Save Your Recovery Code</h2>
+    <p>You'll need this to log back into <b id="recoveryUsername"></b> on another device. Write it down or copy it now — it won't be shown again.</p>
+    <input id="recoveryCodeBox" readonly style="text-align:center;font-weight:800;letter-spacing:1px;background:var(--bg)">
+    <button id="recoveryCopyBtn" type="button" class="gate-btn">Copy Code</button>
+    <div id="recoveryCopyMsg" style="min-height:16px;color:var(--green-700);font-size:12px;margin-top:6px"></div>
+    <button id="recoveryDoneBtn" type="button" class="gate-btn" style="background:#fff;color:var(--green-900);border:1px solid var(--border)">I've saved it — Continue</button>
+  </div>
 </div>
 
-<div class="tabs">
-  <div class="tab active">For You</div>
-  <div class="tab">Following</div>
-  <div class="tab">Trending</div>
-</div>
-
-<div class="composer">
-  <div class="composer-avatar">👤</div>
-  <input type="text" class="composer-input" placeholder="What's on your mind?">
-  <button onclick="createPost()" style="background:var(--orange);color:white;padding:10px 24px;border-radius:999px;font-weight:800;">Post</button>
-</div>
-
-<div id="feed" style="padding-bottom:90px;"></div>
-
-<div class="bottom-nav">
-  <a href="#" class="active">🏠</a>
-  <a href="#">🔎</a>
-  <a href="#" onclick="createPost()" class="create">+</a>
-  <a href="forum.html">💬</a>
-  <a href="#">👤</a>
+<div id="profilePanel">
+  <div style="text-align:center">
+    <div id="profilePhotoWrap">●</div>
+    <input type="file" id="profilePhotoInputCamera" accept="image/*" capture="environment" style="display:none">
+    <input type="file" id="profilePhotoInputGallery" accept="image/*" style="display:none">
+    <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+      <button id="profilePhotoBtnGallery" type="button" class="pp-photo-btn">🖼 Gallery</button>
+      <button id="profilePhotoBtnCamera" type="button" class="pp-photo-btn">📷 Camera</button>
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;justify-content:center;margin-top:8px;font-size:11px;color:var(--ink-500);cursor:pointer">
+      <input type="checkbox" id="profileHidePhoto" style="min-height:auto;width:auto">Hide my photo (show avatar instead)
+    </label>
+    <div style="font-weight:800;font-size:18px;margin-top:10px;color:var(--green-900)" id="profilePanelName">—</div>
+    <div style="font-size:11px;color:var(--green-700);margin-top:2px">✓ Logged in</div>
+  </div>
+  <div style="margin-top:6px;text-align:left">
+    <div class="pp-field"><label>Location</label><input id="profileLocation" placeholder="e.g. Lagos, Nigeria"></div>
+    <div class="pp-field"><label>Sex (optional)</label>
+      <select id="profileSex"><option value="">Prefer not to say</option><option value="Male">Male</option><option value="Female">Female</option></select>
+    </div>
+    <div class="pp-field"><label>Country</label><input id="profileCountry" placeholder="e.g. Nigeria"></div>
+    <div class="pp-field"><label>State</label><input id="profileState" placeholder="e.g. Kwara"></div>
+    <div class="pp-field"><label>WhatsApp</label><input id="profileWhatsapp" placeholder="e.g. 08012345678"></div>
+    <div class="pp-field"><label>Social Link</label><input id="profileSocialLink" placeholder="e.g. instagram.com/you"></div>
+    <button id="profileSaveBtn" type="button">Save</button>
+    <div id="profileSaveMsg" style="min-height:16px;font-size:11px;color:var(--green-700);text-align:center;margin-top:6px"></div>
+    <a href="http://bawaxict.edu.net/status" style="display:block;text-align:center;margin-top:14px;font-size:12px;font-weight:700;color:var(--orange-600)">↩ Back to Hotspot</a>
+  </div>
 </div>
 
 <script>
-function logout() {
-  if(confirm('End your session and logout?')) {
-    fetch('/api/familyhub/logout', {method:'POST', credentials:'include'})
-      .then(() => {
+/* ---- ported unchanged from live site/index.html: gate/join, device binding, recovery ---- */
+(function(){
+  function familyhubUrl(p){return '/familyhub'+p}
+  function hasIdentity(){
+    try{
+      var x=JSON.parse(localStorage.getItem('bawaxict_identity')||'null');
+      return !!(x && x.expires>Date.now()/1000 && x.username && x.clientId);
+    }catch(e){return false}
+  }
+  function getClientId(){
+    try{
+      var c=localStorage.getItem('bawaxict_client_id')||'';
+      if(!c){c='browser-'+crypto.randomUUID();localStorage.setItem('bawaxict_client_id',c)}
+      return c;
+    }catch(e){return 'browser-'+Date.now()+'-'+Math.random().toString(16).slice(2)}
+  }
+  async function checkDeviceBinding(){
+    try{
+      var res=await fetch(familyhubUrl('/api/device?client_id='+encodeURIComponent(getClientId())),{credentials:'include'});
+      return await res.json();
+    }catch(e){return null}
+  }
+
+  var overlay=document.getElementById('gateOverlay'), nameInput=document.getElementById('gateName'),
+      joinBtn=document.getElementById('gateJoinBtn'), errorBox=document.getElementById('gateError'),
+      skip=document.getElementById('gateSkip');
+  var pendingHref=null, gateShownAt=0;
+  function showGate(){gateShownAt=Date.now();overlay.classList.add('show');nameInput.focus()}
+  function hideGate(){overlay.classList.remove('show')}
+
+  function setIdentityDisplays(name){
+    ['welcomeName','composerName'].forEach(function(id){var el=document.getElementById(id);if(el)el.textContent=name});
+    var initial=(name||'M').trim().charAt(0).toUpperCase();
+    ['profileAvatar','profileAvatarDesktop','composerAvatar'].forEach(function(id){var el=document.getElementById(id);if(el && !el.querySelector('img'))el.textContent=initial});
+  }
+
+  async function doJoin(username, recoveryCode){
+    errorBox.textContent='';joinBtn.disabled=true;
+    try{
+      var body={username:username, client_id:getClientId()};
+      if(recoveryCode) body.recoveryCode=recoveryCode;
+      var res=await fetch(familyhubUrl('/api/join'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'include'});
+      var data=await res.json();
+      if(!res.ok){
+        if(data.recoveryRequired){
+          var code=prompt('That username is already registered. Enter its recovery code to continue on this device, or press Cancel to choose a different name:');
+          if(code){await doJoin(username, code.trim());return}
+        }
+        errorBox.textContent=data.error||'Unable to join. Try a different username.';
+        return;
+      }
+      localStorage.setItem('bawaxict_identity', JSON.stringify({expires:data.identityExpires, username:data.username, clientId:body.client_id}));
+      try{localStorage.setItem('bawaxict_username', data.username)}catch(e){}
+      setIdentityDisplays(data.username);
+      if(data.recoveryCode){
+        hideGate();
+        var dest=pendingHref;pendingHref=null;
+        document.getElementById('recoveryUsername').textContent=data.username;
+        document.getElementById('recoveryCodeBox').value=data.recoveryCode;
+        document.getElementById('recoveryOverlay').style.display='grid';
+        document.getElementById('recoveryDoneBtn').onclick=function(){
+          document.getElementById('recoveryOverlay').style.display='none';
+          if(dest) location.href=dest;
+        };
+        document.getElementById('recoveryCopyBtn').onclick=function(){
+          var box=document.getElementById('recoveryCodeBox'), msg=document.getElementById('recoveryCopyMsg');
+          box.focus(); box.select(); box.setSelectionRange(0,999);
+          function fallbackCopy(){
+            var ok=false; try{ok=document.execCommand('copy')}catch(e){ok=false}
+            if(ok){msg.style.color='#1D6B4C'; msg.textContent='Copied!';}
+            else{msg.style.color='#B4372A'; msg.textContent="Couldn't copy automatically — the code is selected, use your keyboard's copy option.";}
+          }
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(box.value).then(function(){msg.style.color='#1D6B4C';msg.textContent='Copied!';}).catch(fallbackCopy);
+          }else{fallbackCopy();}
+        };
+      }else{
+        hideGate();
+        if(pendingHref){var dest2=pendingHref;pendingHref=null;location.href=dest2}
+      }
+    }catch(e){
+      errorBox.textContent='Network error. Please try again.';
+    }finally{
+      joinBtn.disabled=false;
+    }
+  }
+
+  joinBtn.addEventListener('click', async function(){
+    var n=nameInput.value.trim();
+    if(!/^[A-Za-z0-9 _.-]{3,24}$/.test(n)){errorBox.textContent='Use 3–24 letters, numbers, spaces, dot, dash or underscore.';return}
+    var bind=await checkDeviceBinding();
+    if(bind && bind.bound && bind.username && bind.username.toLowerCase()!==n.toLowerCase()){
+      var wantsNew=confirm('This device is already registered as "'+bind.username+'".\n\nPress OK to create a brand-new separate account as "'+n+'" instead.\nPress Cancel to continue using your existing account "'+bind.username+'".');
+      if(!wantsNew){ doJoin(bind.username); return; }
+    }
+    doJoin(n);
+  });
+  nameInput.addEventListener('keydown', function(e){if(e.key==='Enter')joinBtn.click()});
+  skip.addEventListener('click', function(){ if(Date.now()-gateShownAt<1200) return; hideGate(); });
+
+  document.addEventListener('click', function(e){
+    if(hasIdentity()) return;
+    if(e.target.closest('#gateOverlay')) return;
+    var el=e.target.closest('a, button');
+    if(!el) return;
+    if(el.id==='meTabBtn') return;
+    if(el.closest('.bottom-nav') && el.getAttribute('href')==='#') { e.preventDefault(); return; }
+    var link=e.target.closest('a[href]');
+    e.preventDefault();
+    pendingHref = link ? link.getAttribute('href') : null;
+    showGate();
+  }, true);
+
+  // restore identity display on load if already joined
+  try{
+    var stored=JSON.parse(localStorage.getItem('bawaxict_identity')||'null');
+    if(stored && stored.username) setIdentityDisplays(stored.username);
+  }catch(e){}
+
+  if(!hasIdentity()) showGate();
+
+  var logout=document.getElementById('logoutBtn');
+  if(logout) logout.addEventListener('click',function(e){
+    e.preventDefault();
+    fetch(familyhubUrl('/api/logout'),{method:'POST',credentials:'include'}).catch(function(){}).finally(function(){
+      try{
         localStorage.removeItem('bawaxict_username');
         localStorage.removeItem('familyhub_username');
-        window.location.href = 'login.html';
-      });
-  }
-}
-
-function createPost() {
-  alert('Create Post Modal coming in next update.\n\nOptions will include: Create post, Ask community, Share photo, Sell item, Offer service, Post opportunity, Create event.');
-}
-
-// Load username and feed
-(function(){
-  let name = 'Member';
-  try {
-    const stored = localStorage.getItem('bawaxict_username') || localStorage.getItem('familyhub_username') || '';
-    if (stored) name = stored;
-  } catch(e){}
-  document.getElementById('userName').textContent = name;
-
-  // Placeholder for your real feed
-  document.getElementById('feed').innerHTML = `
-    <div class="post"><div class="post-content" style="padding:20px;">
-      <strong>Welcome to the new social FamilyHub feed.</strong><br><br>
-      Your existing community chat, private messages, rewards, and marketplace features are still fully functional.<br><br>
-      Use the bottom navigation or sidebar links.
-    </div></div>`;
+        localStorage.removeItem('bawaxict_identity');
+      }catch(err){}
+      location.reload();
+    });
+  });
 })();
 </script>
+
+<script>
+/* ---- ported unchanged from live site/index.html: profile panel (photo upload + fields) ---- */
+(function(){
+  function familyhubUrl(p){return '/familyhub'+p}
+  var triggers=[document.getElementById('profileTrigger'),document.getElementById('profileTriggerDesktop')].filter(Boolean),
+      panel=document.getElementById('profilePanel'),
+      photoWrap=document.getElementById('profilePhotoWrap'),
+      nameEl=document.getElementById('profilePanelName'),
+      locInput=document.getElementById('profileLocation'),
+      sexSelect=document.getElementById('profileSex'),
+      countryInput=document.getElementById('profileCountry'),
+      stateInput=document.getElementById('profileState'),
+      whatsappInput=document.getElementById('profileWhatsapp'),
+      socialLinkInput=document.getElementById('profileSocialLink'),
+      hidePhotoBox=document.getElementById('profileHidePhoto'),
+      photoInputCamera=document.getElementById('profilePhotoInputCamera'),
+      photoInputGallery=document.getElementById('profilePhotoInputGallery'),
+      photoBtnCamera=document.getElementById('profilePhotoBtnCamera'),
+      photoBtnGallery=document.getElementById('profilePhotoBtnGallery'),
+      saveBtn=document.getElementById('profileSaveBtn'),
+      saveMsg=document.getElementById('profileSaveMsg');
+
+  function avatarGlyphFor(sex){ if(sex==='Male') return '👨'; if(sex==='Female') return '👩'; return '●'; }
+  var currentPhotoId=null;
+  function setPhotoPreview(id,sex,hidden){
+    var avatars=[document.getElementById('profileAvatar'),document.getElementById('profileAvatarDesktop'),document.getElementById('composerAvatar')].filter(Boolean);
+    if(id && !hidden){
+      var url=familyhubUrl('/api/media/'+id);
+      photoWrap.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover">';
+      avatars.forEach(function(a){a.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'});
+    }else{
+      var g=avatarGlyphFor(sex);
+      photoWrap.textContent=g;
+      avatars.forEach(function(a){ if(!a.querySelector('img')) return; a.textContent=g; });
+    }
+  }
+
+  async function loadProfile(){
+    try{
+      var res=await fetch(familyhubUrl('/api/profile'),{credentials:'include'});
+      var data=await res.json();
+      if(!res.ok) return;
+      nameEl.textContent=data.username||'—';
+      locInput.value=data.location||'';
+      sexSelect.value=data.sex||'';
+      countryInput.value=data.country||'';
+      stateInput.value=data.state||'';
+      whatsappInput.value=data.whatsapp||'';
+      socialLinkInput.value=data.socialLink||'';
+      hidePhotoBox.checked=!!data.hidePhoto;
+      currentPhotoId=data.profilePhotoId||null;
+      setPhotoPreview(currentPhotoId,data.sex||'',!!data.hidePhoto);
+    }catch(e){}
+  }
+
+  function positionPanel(){
+    if(window.innerWidth<=860){ panel.style.top='70px'; panel.style.left='16px'; panel.style.right='16px'; panel.style.width='auto'; return; }
+    var r=triggers[0].getBoundingClientRect();
+    panel.style.top=(r.bottom+8)+'px';
+    var left=r.right-panel.offsetWidth;
+    if(left<10) left=10;
+    panel.style.left=left+'px';
+    panel.style.right='auto';
+    panel.style.width='min(320px,90vw)';
+  }
+
+  function openPanel(){ panel.style.display='block'; positionPanel(); loadProfile(); }
+  function closePanel(){ panel.style.display='none'; saveMsg.textContent=''; }
+
+  triggers.forEach(function(t){ t.addEventListener('click', function(e){ e.stopPropagation(); if(panel.style.display==='block') closePanel(); else openPanel(); }); });
+  var meTab=document.getElementById('meTabBtn');
+  if(meTab) meTab.addEventListener('click', function(e){ e.stopPropagation(); openPanel(); });
+
+  document.addEventListener('click', function(e){
+    if(panel.style.display==='block' && !panel.contains(e.target) && !triggers.includes(e.target) && e.target.id!=='meTabBtn'){
+      closePanel();
+    }
+  });
+
+  if(photoBtnGallery) photoBtnGallery.addEventListener('click', function(){ photoInputGallery.click(); });
+  if(photoBtnCamera) photoBtnCamera.addEventListener('click', function(){ photoInputCamera.click(); });
+  async function uploadPhotoFile(file){
+    if(!file) return;
+    var fd=new FormData(); fd.append('file', file);
+    photoBtnGallery.disabled=true; photoBtnCamera.disabled=true;
+    var oldG=photoBtnGallery.textContent, oldC=photoBtnCamera.textContent;
+    photoBtnGallery.textContent='Uploading…'; photoBtnCamera.textContent='Uploading…';
+    try{
+      var res=await fetch(familyhubUrl('/api/profile/photo'),{method:'POST',body:fd,credentials:'include'});
+      var data=await res.json();
+      if(res.ok && data.profilePhotoId){
+        hidePhotoBox.checked=false;
+        currentPhotoId=data.profilePhotoId;
+        setPhotoPreview(currentPhotoId,sexSelect.value,false);
+      } else { alert(data.error||'Unable to upload photo.'); }
+    }catch(e){ alert('Network error uploading photo.'); }
+    finally{
+      photoBtnGallery.disabled=false; photoBtnCamera.disabled=false;
+      photoBtnGallery.textContent=oldG; photoBtnCamera.textContent=oldC;
+    }
+  }
+  if(photoInputGallery) photoInputGallery.addEventListener('change', function(){ uploadPhotoFile(photoInputGallery.files[0]); });
+  if(hidePhotoBox) hidePhotoBox.addEventListener('change', function(){ setPhotoPreview(currentPhotoId, sexSelect.value, hidePhotoBox.checked); });
+  if(photoInputCamera) photoInputCamera.addEventListener('change', function(){ uploadPhotoFile(photoInputCamera.files[0]); });
+
+  if(saveBtn) saveBtn.addEventListener('click', async function(){
+    saveBtn.disabled=true; saveMsg.textContent='';
+    try{
+      var res=await fetch(familyhubUrl('/api/profile'),{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',
+        body:JSON.stringify({location:locInput.value.trim(),sex:sexSelect.value,country:countryInput.value.trim(),state:stateInput.value.trim(),whatsapp:whatsappInput.value.trim(),socialLink:socialLinkInput.value.trim(),hidePhoto:hidePhotoBox.checked})});
+      var data=await res.json();
+      if(res.ok){ setPhotoPreview(data.profilePhotoId!==undefined?data.profilePhotoId:null,sexSelect.value,hidePhotoBox.checked); saveMsg.style.color='#1D6B4C'; saveMsg.textContent='Saved!'; }
+      else{ saveMsg.style.color='#B4372A'; saveMsg.textContent=data.error||'Unable to save.'; }
+    }catch(e){ saveMsg.style.color='#B4372A'; saveMsg.textContent='Network error.'; }
+    finally{ saveBtn.disabled=false; }
+  });
+
+  if(window.location.hash === '#profile') setTimeout(function(){ if(triggers[0]) triggers[0].click(); }, 500);
+})();
+</script>
+
+<script>
+/* ---- ported unchanged from live site/index.html: live activity feed, restyled as feed posts ---- */
+function avatarInitial(name){ return (name||'?').trim().charAt(0).toUpperCase(); }
+async function loadCommunityActivities(){
+  try{
+    const res = await fetch('/familyhub/api/community-activities');
+    const data = await res.json();
+    const box = document.getElementById('familyhub-activity-feed');
+    if(!box) return;
+
+    if(!data.activities || data.activities.length === 0){
+      box.innerHTML = `
+      <div class="card post">
+        <div class="post-head"><span class="avatar">🌍</span>
+          <div class="post-who"><b>FamilyHub Community</b><span class="meta">No activity yet. Be the first to participate.</span></div>
+        </div>
+      </div>`;
+      return;
+    }
+
+    box.innerHTML = data.activities.slice(0,10).map(a => `
+      <a class="card post" style="display:block;margin-bottom:14px" href="${a.link || 'community-chat.html'}">
+        <div class="post-head">
+          <span class="avatar">${a.emoji || avatarInitial(a.username)}</span>
+          <div class="post-who"><b>${a.username}</b><span class="meta">Community · Live</span></div>
+        </div>
+        <p class="post-body">${a.actionText || ''}</p>
+      </a>
+    `).join('');
+  }catch(e){ console.log('Activity feed unavailable', e); }
+}
+loadCommunityActivities();
+setInterval(loadCommunityActivities, 30000);
+</script>
+
 </body>
 </html>
