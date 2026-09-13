@@ -213,6 +213,29 @@ def init_db():
             blocked_id INTEGER NOT NULL,
             UNIQUE(blocker_id,blocked_id)
         );
+        CREATE TABLE IF NOT EXISTS likes (
+            post_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at INTEGER NOT NULL,
+            UNIQUE(post_id,user_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_likes_post ON likes(post_id);
+        CREATE TABLE IF NOT EXISTS comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            username_snapshot TEXT NOT NULL,
+            message TEXT NOT NULL,
+            created_at INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id,id);
+        CREATE TABLE IF NOT EXISTS follows (
+            follower_id INTEGER NOT NULL,
+            followed_id INTEGER NOT NULL,
+            created_at INTEGER NOT NULL,
+            UNIQUE(follower_id,followed_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows(follower_id);
         CREATE TABLE IF NOT EXISTS private_reads (
             user_id INTEGER NOT NULL,
             thread_id INTEGER NOT NULL,
@@ -420,6 +443,9 @@ def cleanup():
     with db_lock:
         con=db()
         con.execute("DELETE FROM community WHERE created_at < ?",(now-PUBLIC_RETENTION,))
+        con.execute("DELETE FROM likes WHERE post_id NOT IN (SELECT id FROM community)")
+        con.execute("DELETE FROM comments WHERE post_id NOT IN (SELECT id FROM community)")
+        con.execute("DELETE FROM follows WHERE follower_id NOT IN (SELECT id FROM users) OR followed_id NOT IN (SELECT id FROM users)")
         con.execute("DELETE FROM private_messages WHERE created_at < ?",(now-PRIVATE_RETENTION,))
         con.execute("DELETE FROM private_reads WHERE thread_id NOT IN (SELECT id FROM threads)")
         con.execute("DELETE FROM events WHERE created_at < ?",(now-EVENT_RETENTION_SECONDS,))
@@ -841,21 +867,60 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 u=con.execute('SELECT * FROM users WHERE lower(username)=lower(?)',(target,)).fetchone()
                 if not u: con.close(); send_json(self,{'error':'User not found.'},404); return
                 pm=con.execute('SELECT id FROM media WHERE id=?',(u['profile_media_id'],)).fetchone() if u['profile_media_id'] else None
+                following=bool(user and con.execute('SELECT 1 FROM follows WHERE follower_id=? AND followed_id=?',(user['id'],u['id'])).fetchone())
                 con.close()
-                send_json(self,{'username':u['username'],'location':u['location'] or '','sex':u['sex'] or '','country':u['country'] or '','state':u['state'] or '','profilePhotoId':(None if u['hide_photo'] else (pm['id'] if pm else None))})
+                send_json(self,{'username':u['username'],'location':u['location'] or '','sex':u['sex'] or '','country':u['country'] or '','state':u['state'] or '','profilePhotoId':(None if u['hide_photo'] else (pm['id'] if pm else None)),'following':following})
                 return
+            if path=='/api/profile/public/posts':
+                if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
+                target=params.get('username',[''])[0].strip()
+                if not target: con.close(); send_json(self,{'error':'Missing username.'},400); return
+                u=con.execute('SELECT * FROM users WHERE lower(username)=lower(?)',(target,)).fetchone()
+                if not u: con.close(); send_json(self,{'error':'User not found.'},404); return
+                if u['hidden'] and u['id']!=user['id']:
+                    con.close(); send_json(self,{'username':u['username'],'hidden':True,'posts':[]}); return
+                rows=con.execute('SELECT id,username_snapshot,message,created_at FROM community WHERE user_id=? ORDER BY id DESC LIMIT 150',(u['id'],)).fetchall()
+                con.close(); send_json(self,{'username':u['username'],'hidden':False,'posts':[dict(r) for r in rows]}); return
             if path=='/api/blocks':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
                 rows=con.execute('SELECT u.username FROM blocks b JOIN users u ON u.id=b.blocked_id WHERE b.blocker_id=? ORDER BY lower(u.username)',(user['id'],)).fetchall(); con.close(); send_json(self,{'users':[r['username'] for r in rows]}); return
             if path=='/api/community':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
                 since=max(0,int(params.get('since',['0'])[0] or 0))
-                if since:
-                    rows=con.execute('SELECT id,username_snapshot,message,created_at FROM community WHERE id>? ORDER BY id ASC LIMIT 150',(since,)).fetchall()
+                sort=str(params.get('sort',[''])[0] or '')
+                base=('SELECT c.id,c.username_snapshot,c.message,c.created_at,'
+                      '(SELECT COUNT(*) FROM likes l WHERE l.post_id=c.id) AS like_count,'
+                      '(SELECT COUNT(*) FROM comments cm WHERE cm.post_id=c.id) AS comment_count,'
+                      'EXISTS(SELECT 1 FROM likes l2 WHERE l2.post_id=c.id AND l2.user_id=?) AS liked FROM community c')
+                if sort=='top':
+                    rows=con.execute(base+' ORDER BY (like_count+comment_count) DESC, c.id DESC LIMIT 150',(user['id'],)).fetchall()
+                elif since:
+                    rows=con.execute(base+' WHERE c.id>? ORDER BY c.id ASC LIMIT 150',(user['id'],since)).fetchall()
                 else:
-                    rows=con.execute('SELECT id,username_snapshot,message,created_at FROM community ORDER BY id DESC LIMIT 150').fetchall()
+                    rows=con.execute(base+' ORDER BY c.id DESC LIMIT 150',(user['id'],)).fetchall()
                     rows=list(reversed(rows))
-                con.close(); send_json(self,{'messages':[dict(r) for r in rows],'latestId':int(rows[-1]['id']) if rows else since}); return
+                out=[]
+                for r in rows:
+                    d=dict(r); d['liked']=bool(d['liked']); d['like_count']=int(d['like_count']); d['comment_count']=int(d['comment_count']); out.append(d)
+                con.close(); send_json(self,{'messages':out,'latestId':int(rows[-1]['id']) if rows else since}); return
+            if path=='/api/community/following':
+                if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
+                rows=con.execute('SELECT c.id,c.username_snapshot,c.message,c.created_at,'
+                                 '(SELECT COUNT(*) FROM likes l WHERE l.post_id=c.id) AS like_count,'
+                                 '(SELECT COUNT(*) FROM comments cm WHERE cm.post_id=c.id) AS comment_count,'
+                                 'EXISTS(SELECT 1 FROM likes l2 WHERE l2.post_id=c.id AND l2.user_id=?) AS liked '
+                                 'FROM community c JOIN follows f ON f.followed_id=c.user_id WHERE f.follower_id=? ORDER BY c.id DESC LIMIT 150',(user['id'],user['id'])).fetchall()
+                rows=list(reversed(rows))
+                out=[]
+                for r in rows:
+                    d=dict(r); d['liked']=bool(d['liked']); d['like_count']=int(d['like_count']); d['comment_count']=int(d['comment_count']); out.append(d)
+                con.close(); send_json(self,{'messages':out}); return
+            if path=='/api/community/comments':
+                if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
+                try: pid=int(params.get('postId',['0'])[0] or 0)
+                except Exception: pid=0
+                rows=con.execute('SELECT id,username_snapshot,message,created_at FROM comments WHERE post_id=? ORDER BY id ASC LIMIT 150',(pid,)).fetchall()
+                con.close(); send_json(self,{'comments':[dict(r) for r in rows]}); return
             if path=='/api/conversations':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
                 rows=con.execute('''SELECT t.id,t.last_activity,u.id AS other_id,u.username,u.hidden
@@ -892,6 +957,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 rows=con.execute('''SELECT u.username,COUNT(*) count FROM private_messages pm JOIN users u ON u.id=pm.sender_id
                                     LEFT JOIN private_reads pr ON pr.user_id=? AND pr.thread_id=pm.thread_id
                                     WHERE pm.recipient_id=? AND pm.id>COALESCE(pr.last_read,0) GROUP BY pm.sender_id ORDER BY MAX(pm.created_at) DESC''',(user['id'],user['id'])).fetchall(); con.close(); send_json(self,{'count':sum(int(r['count']) for r in rows),'senders':[dict(r) for r in rows]}); return
+            if path=='/api/search':
+                if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
+                q=str(params.get('q',[''])[0] or '').strip()[:60]
+                if len(q)<2: con.close(); send_json(self,{'users':[],'posts':[]}); return
+                like='%'+q.replace('\\','\\\\').replace('%','\\%').replace('_','\\_')+'%'
+                urows=con.execute("SELECT username FROM users WHERE (hidden=0 OR id=?) AND username LIKE ? ESCAPE '\\' ORDER BY lower(username) LIMIT 20",(user['id'],like)).fetchall()
+                prows=con.execute("SELECT id,username_snapshot,message,created_at FROM community WHERE message LIKE ? ESCAPE '\\' OR username_snapshot LIKE ? ESCAPE '\\' ORDER BY id DESC LIMIT 30",(like,like)).fetchall()
+                con.close(); send_json(self,{'users':[r['username'] for r in urows],'posts':[dict(r) for r in prows]}); return
             if path=='/api/rewards/mine':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
                 chat_seconds=int(user['chat_seconds'] or 0); tier=int(user['reward_tier'] or 0)
@@ -1379,6 +1452,37 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 )
 
                 record_activity(con,user,now); emit_event(con,0,'community.message',{'messageId':message_id,'username':user['username'],'message':message,'createdAt':now}); con.commit(); con.close(); send_json(self,{'ok':True,'message':{'id':message_id,'sender_id':user['id'],'username_snapshot':user['username'],'message':message,'created_at':now}});return
+            if path=='/api/community/like':
+                try: pid=int(data.get('postId') or 0)
+                except Exception: pid=0
+                post=con.execute('SELECT id FROM community WHERE id=?',(pid,)).fetchone()
+                if not post: con.close(); send_json(self,{'error':'Post not found.'},404); return
+                if not allow_message(user['id']):
+                    con.close(); send_json(self,{'error':'Too many likes. Please wait a few seconds.'},429); return
+                now=int(time.time())
+                row=con.execute('SELECT 1 FROM likes WHERE post_id=? AND user_id=?',(pid,user['id'])).fetchone()
+                if row:
+                    con.execute('DELETE FROM likes WHERE post_id=? AND user_id=?',(pid,user['id'])); liked=False
+                else:
+                    con.execute('INSERT OR IGNORE INTO likes(post_id,user_id,created_at) VALUES(?,?,?)',(pid,user['id'],now)); liked=True
+                count=con.execute('SELECT COUNT(*) n FROM likes WHERE post_id=?',(pid,)).fetchone()['n']
+                record_activity(con,user,now); emit_event(con,0,'community.like',{'postId':pid,'username':user['username'],'liked':liked,'likeCount':count,'createdAt':now}); con.commit(); con.close(); send_json(self,{'ok':True,'liked':liked,'likeCount':count}); return
+            if path=='/api/community/comment':
+                try: pid=int(data.get('postId') or 0)
+                except Exception: pid=0
+                message=str(data.get('message','')).strip()
+                if not message or len(message)>MAX_TEXT:con.close();send_json(self,{'error':'Comment is empty or too long.'},400);return
+                post=con.execute('SELECT id FROM community WHERE id=?',(pid,)).fetchone()
+                if not post: con.close(); send_json(self,{'error':'Post not found.'},404); return
+                if not allow_message(user['id']):
+                    con.close(); send_json(self,{'error':'You are commenting too quickly. Please wait a few seconds.'},429); return
+                hit=contains_abuse(message)
+                if hit:
+                    now=int(time.time());con.execute('INSERT INTO flags(scope,username,term,message,created_at) VALUES(?,?,?,?,?)',('comment',user['username'],hit,message,now));con.commit();con.close()
+                    send_json(self,{'error':'Comment blocked: it looks like it contains abusive or insulting language. Please keep Community Chat respectful — repeated attempts are visible to the admin.'},400);return
+                now=int(time.time()); cur=con.execute('INSERT INTO comments(post_id,user_id,username_snapshot,message,created_at) VALUES(?,?,?,?,?)',(pid,user['id'],user['username'],message,now)); comment_id=cur.lastrowid
+                count=con.execute('SELECT COUNT(*) n FROM comments WHERE post_id=?',(pid,)).fetchone()['n']
+                record_activity(con,user,now); emit_event(con,0,'community.comment',{'commentId':comment_id,'postId':pid,'username':user['username'],'message':message,'commentCount':count,'createdAt':now}); con.commit(); con.close(); send_json(self,{'ok':True,'comment':{'id':comment_id,'username_snapshot':user['username'],'message':message,'created_at':now},'commentCount':count});return
             if path=='/api/private':
                 recipient=str(data.get('recipient','')).strip();message=str(data.get('message','')).strip();other=con.execute('SELECT * FROM users WHERE username=?',(recipient,)).fetchone()
                 if not other or other['id']==user['id'] or len(message)>MAX_TEXT:con.close();send_json(self,{'error':'Recipient or message is invalid.'},400);return
@@ -1406,6 +1510,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if path=='/api/block':con.execute('INSERT OR IGNORE INTO blocks(blocker_id,blocked_id) VALUES(?,?)',(user['id'],other['id']))
                 else:con.execute('DELETE FROM blocks WHERE blocker_id=? AND blocked_id=?',(user['id'],other['id']))
                 con.commit();con.close();send_json(self,{'ok':True});return
+            if path in ('/api/follow','/api/unfollow'):
+                other_name=str(data.get('other','')).strip();other=con.execute('SELECT id FROM users WHERE username=?',(other_name,)).fetchone()
+                if not other or other['id']==user['id']:con.close();send_json(self,{'error':'Invalid member.'},400);return
+                if path=='/api/follow':con.execute('INSERT OR IGNORE INTO follows(follower_id,followed_id,created_at) VALUES(?,?,?)',(user['id'],other['id'],int(time.time())))
+                else:con.execute('DELETE FROM follows WHERE follower_id=? AND followed_id=?',(user['id'],other['id']))
+                con.commit();con.close();send_json(self,{'ok':True,'following':path=='/api/follow'});return
             con.close()
         send_json(self,{'error':'Not found'},404)
 
