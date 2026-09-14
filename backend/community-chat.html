@@ -1,37 +1,205 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Cache-Control" content="no-store"><title>BAWAX ICT | Community Chat</title><link rel="stylesheet" href="css/bawaxict.css"><style>body{margin:0}.wrap{min-height:100vh;display:grid;place-items:center;padding:20px;background:#f4f7f6}.card{width:min(460px,94vw);background:#fff;border-radius:16px;padding:24px;box-shadow:0 12px 40px #0002;text-align:center}.card img{height:52px}.card h1{color:#075e54;font-size:24px;margin:12px 0 8px}.card p{color:#667781;line-height:1.5;font-size:14px}.card input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #ccd5d2;border-radius:9px;font-size:16px;outline:0}.btn{width:100%;margin-top:12px;padding:13px;border:0;border-radius:9px;background:#075e54;color:#fff;font-weight:800;font-size:15px;cursor:pointer}.back{display:inline-block;margin-top:12px;color:#075e54;text-decoration:none;font-size:13px}.err{min-height:18px;color:#b42318;font-size:12px;margin-top:8px}</style>  <link rel="stylesheet" href="css/mobile-safe.css">
-<script src="config.js"></script></head><body><div class="wrap"><div class="card"><img src="assets/bawaxict-logo.png" alt="BAWAX ICT"><h1>Community Chat</h1><p>Create your unique community username before entering FamilyHub Community. Your username is reserved to you for <b>21 days</b> and cannot be changed before then.</p><input id="name" maxlength="24" autocomplete="nickname" placeholder="Enter a unique username"><button class="btn" id="go">Continue to FamilyHub Community</button><div class="err" id="err"></div><a class="back" id="skip" href="#">Already chatted here before? Continue as returning member →</a><br><a class="back" id="back" href="index.html">← Return to Portal</a></div></div><script>(function(){const name=document.getElementById('name'),go=document.getElementById('go'),err=document.getElementById('err'),skip=document.getElementById('skip');const base=(window.BAWAXICT_CONFIG&&window.BAWAXICT_CONFIG.familyHubBase)||'/familyhub/';let stored='';try{stored=localStorage.getItem('bawaxict_username')||localStorage.getItem('familyhub_username')||''}catch(e){}if(stored.trim())name.value=stored.trim().slice(0,24)// Auto-login if username is already stored
-// Auto-login if username is already stored
-// Also support hotspot users who may have a device binding
-if(stored.trim()) {
-    // Hide the card and show a loading message
-    document.querySelector('.card').style.display = 'none';
-    document.querySelector('.wrap').innerHTML = '<div style="text-align:center;color:#075e54;font-size:18px;font-weight:bold;">⏳ Logging you in...</div>';
-    setTimeout(function() {
-        document.getElementById('go').click();
-    }, 200);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="theme-color" content="#0B2E23">
+<title>Join FamilyHub | BAWAXICT</title>
+<!--
+  RESTYLED as a join screen in the mockup design system.
+  This was never a chat surface: it collects a username and hands off to
+  forum.html. It now uses the real /api/check-username + /api/join contract
+  (username + client_id) and surfaces the recovery code properly.
+-->
+<link rel="stylesheet" href="css/familyhub-mockup.css">
+<script src="config.js"></script>
+<style>
+body{min-height:100dvh;display:grid;place-items:center;padding:20px;
+  background:linear-gradient(150deg,var(--fh-green-900),var(--fh-green-700) 60%,#0d3a2b)}
+.join{width:min(420px,100%);background:var(--fh-card);border-radius:26px;
+  box-shadow:var(--fh-shadow-lg);overflow:hidden}
+.join-top{background:linear-gradient(135deg,var(--fh-green-900),var(--fh-green-700));
+  padding:28px 26px 22px;color:#fff;text-align:center;position:relative;overflow:hidden}
+.join-top::after{content:"";position:absolute;inset:auto -30% -60% -30%;height:120px;
+  background:radial-gradient(ellipse at center,rgba(18,183,106,.35),transparent 70%)}
+.join-top .fh-brand-mark{width:52px;height:52px;border-radius:16px;font-size:24px;margin:0 auto 12px;
+  background:rgba(255,255,255,.15);backdrop-filter:blur(4px)}
+.join-top h1{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.3px}
+.join-top p{margin:0;font-size:13.5px;opacity:.85;line-height:1.5}
+.join-body{padding:24px 26px 28px}
+.hint{font-size:12.5px;color:var(--fh-muted);line-height:1.55;margin:14px 0 0;text-align:center}
+.avail{font-size:12.5px;font-weight:700;min-height:18px;margin-top:7px;text-align:center}
+.rec-box{background:var(--fh-orange-100);border:1px solid #FFD9BF;border-radius:var(--fh-radius);
+  padding:16px;text-align:center;margin-top:4px}
+.rec-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:26px;font-weight:800;
+  letter-spacing:3px;color:var(--fh-green-900);background:var(--fh-card);border:1px dashed var(--fh-orange-500);
+  border-radius:var(--fh-radius-sm);padding:12px;width:100%;text-align:center;margin:10px 0}
+</style>
+</head>
+<body>
+
+<div class="join">
+  <div class="join-top">
+    <div class="fh-brand-mark">B</div>
+    <h1>Join BAWAXICT FamilyHub</h1>
+    <p>Better Connections. Stronger Communities.</p>
+  </div>
+
+  <div class="join-body" id="stepName">
+    <label class="fh-label" for="name">Choose your community username</label>
+    <input class="fh-input" id="name" maxlength="24" autocomplete="nickname"
+           placeholder="e.g. AdebayoVibes" style="text-align:center;font-size:16px">
+    <div class="avail" id="avail"></div>
+    <button class="fh-btn fh-btn-accent fh-btn-block" id="go" style="margin-top:14px">
+      Create profile &amp; enter FamilyHub
+    </button>
+    <div class="fh-err" id="err" style="text-align:center;margin-top:8px"></div>
+    <p class="hint">
+      Your username is reserved to you for <b>21 days</b> on this device.<br>
+      3–24 letters, numbers, spaces, dot, dash or underscore.
+    </p>
+  </div>
+
+  <div class="join-body" id="stepRecovery" style="display:none">
+    <div class="rec-box">
+      <b style="font-size:14px;color:var(--fh-green-900)">Save your recovery code</b>
+      <input class="rec-code" id="recCode" readonly>
+      <p style="font-size:12px;color:var(--fh-ink-700);margin:0;line-height:1.5">
+        This is the only time it is shown. You need it to use
+        <b id="recName">your name</b> on another device.
+      </p>
+      <button class="fh-btn fh-btn-ghost fh-btn-block fh-btn-sm" id="copy" style="margin-top:10px">Copy code</button>
+      <div style="font-size:11.5px;font-weight:700;min-height:16px;margin-top:6px" id="copyMsg"></div>
+    </div>
+    <button class="fh-btn fh-btn-block" id="done" style="margin-top:14px">I've saved it — continue →</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+var CFG=window.BAWAXICT_CONFIG||{};
+var API=(CFG.familyHubApiBase||'/api/familyhub/').replace(/\/$/,'');
+var $=function(i){return document.getElementById(i)};
+var VALID=/^[A-Za-z0-9 _.-]{3,24}$/;
+
+/* Where to go after joining. Only same-origin relative .html targets are
+   accepted, so ?next= cannot be used as an open-redirect. */
+function nextTarget(){
+  var n='';
+  try{ n=new URLSearchParams(location.search).get('next')||''; }catch(e){}
+  if(/^[A-Za-z0-9_.-]+\.html(\?[^#]*)?$/.test(n)) return n;
+  return 'forum.html';
 }
-} ;function valid(v){return /^[A-Za-z0-9 _.-]{3,24}$/.test(v)}go.onclick=function(){
-    const n=name.value.trim();
-    if(!valid(n)){err.textContent='Use 3–24 letters, numbers, spaces, dot, dash or underscore.';return}
-    
-    // Check if this device already has an account
-    const existingUsername = localStorage.getItem('bawaxict_username') || localStorage.getItem('familyhub_username') || '';
-    
-    if(existingUsername && existingUsername.toLowerCase() !== n.toLowerCase()) {
-        // Device already has a different username - ask what to do
-        if(!confirm('This device is already registered as "' + existingUsername + '".\n\nDo you want to:\n- Click OK to switch to "' + n + '" (you will need the recovery code)\n- Click Cancel to keep using "' + existingUsername + '"')) {
-            // User cancelled - keep existing account
-            name.value = existingUsername;
-            return;
-        }
+
+/* Stable per-device id: the /join contract requires client_id, and the
+   21-day identity is bound to it. Persisted so a returning user on the
+   same device keeps their name without needing the recovery code. */
+function clientId(){
+  var k='bawaxict_client_id',v='';
+  try{v=localStorage.getItem(k)||''}catch(e){}
+  if(!v){
+    v='web-'+(Date.now().toString(36))+'-'+Math.random().toString(36).slice(2,10);
+    try{localStorage.setItem(k,v)}catch(e){}
+  }
+  return v;
+}
+function api(p,o){
+  o=o||{};
+  return fetch(API+p,{method:o.method||'GET',credentials:'include',
+    headers:o.body?{'Content-Type':'application/json'}:undefined,body:o.body})
+    .then(function(r){return r.json().catch(function(){return{}}).then(function(d){
+      if(!r.ok){var e=new Error(d.error||'Request failed.');e.data=d;throw e}return d})});
+}
+
+var t=null;
+$('name').addEventListener('input',function(){
+  var v=$('name').value.trim();
+  $('err').textContent='';
+  if(t)clearTimeout(t);
+  if(v.length<3){$('avail').textContent='';return}
+  if(!VALID.test(v)){
+    $('avail').style.color='var(--fh-danger)';
+    $('avail').textContent='Use 3–24 letters, numbers, spaces, dot, dash or underscore.';return;
+  }
+  $('avail').style.color='var(--fh-muted)';$('avail').textContent='Checking availability…';
+  t=setTimeout(function(){
+    api('/check-username?name='+encodeURIComponent(v)).then(function(d){
+      if(d.available){$('avail').style.color='var(--fh-green-600)';$('avail').textContent='✓ Available';}
+      else{$('avail').style.color='var(--fh-danger)';
+           $('avail').textContent='✗ Taken — you\u2019ll need its recovery code.';}
+    }).catch(function(){$('avail').textContent=''});
+  },380);
+});
+
+function join(name,recoveryCode){
+  var payload={username:name,client_id:clientId()};
+  if(recoveryCode)payload.recoveryCode=recoveryCode;
+  $('go').disabled=true;$('go').textContent='Creating your profile…';
+  api('/join',{method:'POST',body:JSON.stringify(payload)}).then(function(d){
+    try{localStorage.setItem('bawaxict_username',d.username)}catch(e){}
+    if(d.recoveryCode){
+      $('stepName').style.display='none';
+      $('stepRecovery').style.display='';
+      $('recCode').value=d.recoveryCode;
+      $('recName').textContent=d.username;
+    }else{
+      location.href=nextTarget();
     }
-    
-    go.disabled=true;
-    go.textContent='Opening FamilyHub…';
-    location.href=base+'?preferredName='+encodeURIComponent(n);
+  }).catch(function(e){
+    if(e.data&&e.data.recoveryRequired){
+      var code=prompt('"'+name+'" is already registered.\n\nEnter its recovery code to continue on this device, or press Cancel to pick another name.');
+      if(code&&code.trim())return join(name,code.trim());
+    }
+    $('err').textContent=e.message||'Could not create your profile.';
+  }).finally(function(){
+    $('go').disabled=false;$('go').textContent='Create profile & enter FamilyHub';
+  });
+}
+
+$('go').onclick=function(){
+  var v=$('name').value.trim();
+  if(!VALID.test(v)){$('err').textContent='Use 3–24 letters, numbers, spaces, dot, dash or underscore.';return}
+  join(v,'');
 };
-// Returning members: this device is already bound to one community username
-// for 21 days, so skip typing a name here — FamilyHub recognizes the device
-// automatically and logs the same member straight back in.
-skip.onclick=function(e){e.preventDefault();skip.textContent='Opening FamilyHub…';location.href=base+''};
-})();</script></body></html>
+$('name').addEventListener('keydown',function(e){if(e.key==='Enter')$('go').click()});
+
+$('copy').onclick=function(){
+  var b=$('recCode');b.focus();b.select();b.setSelectionRange(0,999);
+  function fb(){
+    var ok=false;try{ok=document.execCommand('copy')}catch(e){}
+    $('copyMsg').style.color=ok?'var(--fh-green-600)':'var(--fh-danger)';
+    $('copyMsg').textContent=ok?'Copied!':'Select the code and copy it manually.';
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(b.value).then(function(){
+      $('copyMsg').style.color='var(--fh-green-600)';$('copyMsg').textContent='Copied!';
+    }).catch(fb);
+  }else fb();
+};
+$('done').onclick=function(){location.href=nextTarget()};
+
+/* Already signed in on this device? Go straight through without showing
+   the gate. If the cookie is gone but the device is still bound inside its
+   21-day identity, re-join silently rather than asking again. */
+api('/session').then(function(s){
+  if(s.authenticated){ location.href=nextTarget(); return; }
+  throw new Error('no session');
+}).catch(function(){
+  var cid=clientId();
+  api('/device?client_id='+encodeURIComponent(cid)).then(function(d){
+    if(d&&d.bound&&d.username){
+      return api('/join',{method:'POST',body:JSON.stringify({username:d.username,client_id:cid})})
+        .then(function(r){ if(r&&r.ok) location.href=nextTarget(); });
+    }
+  }).catch(function(){});
+});
+try{
+  var saved=localStorage.getItem('bawaxict_username')||localStorage.getItem('familyhub_username')||'';
+  if(saved)$('name').value=saved.slice(0,24);
+}catch(e){}
+})();
+</script>
+</body>
+</html>

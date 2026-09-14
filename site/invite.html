@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B2E23">
+<title>Invite &amp; Earn | BAWAXICT FamilyHub</title>
+<!--
+  Invite & Earn — share sheet for the "Invite Now" card in forum.html.
+  Share targets are plain web-intent URLs (no SDKs, no trackers, no CDN),
+  which matters because third-party scripts are blocked pre-auth on a
+  captive portal. WhatsApp uses https://wa.me/?text= which opens the app
+  on mobile and WhatsApp Web on desktop.
+  Reward progress is read from the real /api/rewards/mine endpoint; no
+  referral-count is displayed because the backend has no referral table
+  and inventing one would be fake data.
+-->
+<link rel="stylesheet" href="css/familyhub-mockup.css">
+<script src="config.js"></script>
+<style>
+.layout{display:flex;min-height:100dvh}
+.content{flex:1;min-width:0}
+.topbar{height:var(--fh-header);background:var(--fh-card);border-bottom:1px solid var(--fh-border);
+  display:flex;align-items:center;gap:14px;padding:0 20px;position:sticky;top:0;z-index:20}
+.topbar h1{font-size:16px;font-weight:800;color:var(--fh-green-900);margin:0}
+.wrap{max-width:720px;margin:0 auto;padding:22px 18px 48px}
+.hero{background:linear-gradient(135deg,var(--fh-green-900),var(--fh-green-700));
+  border-radius:var(--fh-radius-lg);padding:28px 26px;color:#fff;text-align:center;
+  position:relative;overflow:hidden;margin-bottom:18px}
+.hero::after{content:"";position:absolute;left:-20%;right:-20%;bottom:-70%;height:190px;
+  background:radial-gradient(ellipse at center,rgba(18,183,106,.45),transparent 70%);
+  pointer-events:none}
+.hero-in{position:relative}
+.hero .ic{font-size:40px;line-height:1}
+.hero h2{margin:10px 0 6px;font-size:23px;font-weight:800;letter-spacing:-.3px}
+.hero p{margin:0 auto;font-size:14px;opacity:.88;max-width:420px;line-height:1.55}
+.linkbox{display:flex;gap:8px;margin:18px 0 6px}
+.linkbox input{flex:1;min-width:0;border:1px solid var(--fh-border);border-radius:var(--fh-radius-sm);
+  padding:12px 14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;
+  background:var(--fh-bg);color:var(--fh-ink);outline:0}
+.copied{font-size:12px;font-weight:700;color:var(--fh-green-600);min-height:17px;margin-bottom:14px}
+h3{font-size:14px;font-weight:800;color:var(--fh-green-900);margin:22px 0 10px}
+.shares{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.share{display:flex;align-items:center;gap:11px;padding:14px;border-radius:var(--fh-radius);
+  border:1px solid var(--fh-border);background:var(--fh-card);font-weight:700;font-size:13.5px;
+  color:var(--fh-ink);transition:.15s;cursor:pointer;text-align:left;font-family:inherit}
+.share:hover{transform:translateY(-2px);box-shadow:var(--fh-shadow);border-color:transparent}
+.share .badge{width:38px;height:38px;border-radius:11px;flex:none;display:grid;place-items:center}
+.share .badge svg{width:20px;height:20px;fill:#fff}
+.wa .badge{background:#25D366}.tg .badge{background:#229ED9}.fb .badge{background:#1877F2}
+.tw .badge{background:#0F1419}.sms .badge{background:var(--fh-green-600)}
+.em .badge{background:var(--fh-muted)}.more .badge{background:var(--fh-orange-500)}
+.steps{counter-reset:s;margin:0;padding:0;list-style:none}
+.steps li{counter-increment:s;position:relative;padding:11px 0 11px 40px;
+  border-bottom:1px solid var(--fh-border);font-size:13.5px;color:var(--fh-ink-700);line-height:1.5}
+.steps li:last-child{border:0}
+.steps li::before{content:counter(s);position:absolute;left:0;top:10px;width:26px;height:26px;
+  border-radius:50%;background:var(--fh-green-100);color:#166534;font-weight:800;font-size:12px;
+  display:grid;place-items:center}
+.prog{height:9px;border-radius:999px;background:var(--fh-border);overflow:hidden;margin:10px 0 7px}
+.prog i{display:block;height:100%;width:0;border-radius:999px;
+  background:linear-gradient(90deg,var(--fh-green-500),var(--fh-green-600));transition:width .5s}
+@media(max-width:900px){.wrap{padding:16px 14px 90px}}
+</style>
+</head>
+<body class="has-tabbar">
+
+<div class="layout">
+  <aside class="fh-rail">
+    <a href="forum.html" class="fh-brand" style="padding:6px 10px 16px">
+      <span class="fh-brand-mark">B</span>
+      <span class="fh-brand-text"><b>BAWAXICT</b><span>FamilyHub</span></span>
+    </a>
+    <a class="fh-nav-item" href="forum.html"><span class="ic">⌂</span>Home</a>
+    <a class="fh-nav-item" href="discover.html"><span class="ic">⌕</span>Discover</a>
+    <a class="fh-nav-item" href="private-chat.html"><span class="ic">✉</span>Chat</a>
+    <a class="fh-nav-item" href="marketplace.html"><span class="ic">▤</span>Marketplace</a>
+    <a class="fh-nav-item" href="services.html"><span class="ic">⚒</span>Services</a>
+    <a class="fh-nav-item" href="institute.html"><span class="ic">▰</span>Learning</a>
+    <a class="fh-nav-item" href="skills.html"><span class="ic">▣</span>Opportunities</a>
+    <a class="fh-nav-item" href="games.html"><span class="ic">⌁</span>Entertainment</a>
+    <a class="fh-nav-item" href="tickets.html"><span class="ic">◇</span>Internet Tickets</a>
+    <a class="fh-nav-item" href="report.html"><span class="ic">◉</span>Support</a>
+    <div style="flex:1"></div>
+    <div class="fh-wifi"><span class="fh-dot" id="wifiDot"></span><span id="wifiTxt">Checking…</span></div>
+  </aside>
+
+  <div class="content">
+    <header class="topbar">
+      <a href="forum.html" class="fh-btn fh-btn-ghost fh-btn-sm">← Back</a>
+      <h1>Invite &amp; Earn</h1>
+    </header>
+
+    <div class="wrap">
+      <div class="hero">
+        <div class="hero-in">
+          <div class="ic">🎁</div>
+          <h2>Invite friends, earn free data</h2>
+          <p>Share BAWAXICT FamilyHub with people nearby. The more the community
+             grows, the more everyone gets out of it.</p>
+        </div>
+      </div>
+
+      <div class="fh-card fh-card-p">
+        <label class="fh-label" for="link">Your invite link</label>
+        <div class="linkbox">
+          <input id="link" readonly>
+          <button class="fh-btn" id="copyBtn">Copy</button>
+        </div>
+        <div class="copied" id="copied"></div>
+
+        <h3 style="margin-top:4px">Share via</h3>
+        <div class="shares">
+          <button class="share wa" data-t="wa">
+            <span class="badge"><svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.9-2-1s-.5-.1-.7.2-.7 1-.9 1.2-.4.2-.7.1a8.2 8.2 0 01-2.4-1.5 9 9 0 01-1.7-2.1c-.2-.3 0-.5.1-.6l.5-.6.3-.5a.6.6 0 000-.6L9 6.9c-.2-.6-.5-.5-.7-.5h-.6a1.1 1.1 0 00-.8.4A3.3 3.3 0 006 9.2a5.8 5.8 0 001.2 3 13 13 0 005 4.400000000000001 16.8 16.8 0 001.7.6 4 4 0 001.8.1 3 3 0 002-1.4 2.4 2.4 0 00.2-1.4zM12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.3A10 10 0 1012 2z"/></svg></span>
+            WhatsApp
+          </button>
+          <button class="share tg" data-t="tg">
+            <span class="badge"><svg viewBox="0 0 24 24"><path d="M21.9 4.3l-3 14.2c-.2 1-.8 1.3-1.7.8l-4.7-3.4-2.2 2.2c-.3.3-.5.5-1 .5l.4-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.9 12.2 2.2 10.8c-1-.3-1-1 .2-1.5l18.1-7c.8-.3 1.6.2 1.4 2z"/></svg></span>
+            Telegram
+          </button>
+          <button class="share fb" data-t="fb">
+            <span class="badge"><svg viewBox="0 0 24 24"><path d="M22 12a10 10 0 10-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.4v7A10 10 0 0022 12z"/></svg></span>
+            Facebook
+          </button>
+          <button class="share tw" data-t="tw">
+            <span class="badge"><svg viewBox="0 0 24 24"><path d="M18.2 2H21l-6.4 7.3L22 22h-5.8l-4.6-6-5.2 6H3.6l6.9-7.9L2.3 2h6l4.1 5.5zm-1 18h1.6L7.9 3.7H6.2z"/></svg></span>
+            X / Twitter
+          </button>
+          <button class="share sms" data-t="sms">
+            <span class="badge"><svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"/></svg></span>
+            SMS
+          </button>
+          <button class="share em" data-t="em">
+            <span class="badge"><svg viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zm0 4l-8 5-8-5V6l8 5 8-5z"/></svg></span>
+            Email
+          </button>
+          <button class="share more" data-t="more" id="moreBtn" style="display:none">
+            <span class="badge"><svg viewBox="0 0 24 24"><path d="M18 16a3 3 0 00-2 .8L9 13a3 3 0 000-2l7-3.8A3 3 0 1015 5l-7 3.8a3 3 0 100 6.4l7 3.8A3 3 0 1018 16z"/></svg></span>
+            More apps
+          </button>
+        </div>
+      </div>
+
+      <div class="fh-card fh-card-p" style="margin-top:14px">
+        <h3 style="margin-top:0">Your reward progress</h3>
+        <div class="prog"><i id="progBar"></i></div>
+        <div style="display:flex;justify-content:space-between;font-size:12.5px">
+          <span class="fh-muted" id="progNow">—</span>
+          <b id="progGoal" style="color:var(--fh-green-700)">—</b>
+        </div>
+        <p class="fh-muted" style="font-size:12.5px;line-height:1.55;margin:10px 0 0" id="progNote">
+          Loading your rewards…
+        </p>
+      </div>
+
+      <div class="fh-card fh-card-p" style="margin-top:14px">
+        <h3 style="margin-top:0">How it works</h3>
+        <ol class="steps">
+          <li>Share your invite link with friends, family or neighbours.</li>
+          <li>They connect to BAWAXICT WiFi and open FamilyHub.</li>
+          <li>They pick a username and join the community — it's free.</li>
+          <li>Stay active in the community to build up free browsing rewards.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<nav class="fh-tabbar">
+  <a href="forum.html"><span class="ic">⌂</span>Home</a>
+  <a href="discover.html"><span class="ic">⌕</span>Discover</a>
+  <a href="marketplace.html"><span class="fab">+</span></a>
+  <a href="private-chat.html"><span class="ic">✉</span>Chat</a>
+  <a href="services.html"><span class="ic">⚒</span>Services</a>
+</nav>
+
+<script>
+(function(){
+'use strict';
+var CFG=window.BAWAXICT_CONFIG||{};
+var API=(CFG.familyHubApiBase||'/api/familyhub/').replace(/\/$/,'');
+var $=function(i){return document.getElementById(i)};
+function toast(t){var e=document.createElement('div');e.className='fh-toast';e.textContent=t;
+  document.body.appendChild(e);setTimeout(function(){e.remove()},3000)}
+
+/* The invite link points at the join screen on whatever host is serving this
+   page, so it stays correct on the hotspot LAN and on the public domain
+   without being hardcoded. */
+var INVITE = location.origin + location.pathname.replace(/[^/]*$/,'') + 'community-chat.html';
+$('link').value = INVITE;
+
+var MSG = 'Join me on BAWAXICT FamilyHub \u2014 free community chat, local services, '
+        + 'learning and marketplace on the BAWAXICT WiFi. No data needed to chat.\n\n' + INVITE;
+
+var TARGETS = {
+  wa:  function(){ return 'https://wa.me/?text=' + encodeURIComponent(MSG); },
+  tg:  function(){ return 'https://t.me/share/url?url=' + encodeURIComponent(INVITE)
+                        + '&text=' + encodeURIComponent(MSG.split('\n')[0]); },
+  fb:  function(){ return 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(INVITE); },
+  tw:  function(){ return 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(MSG); },
+  sms: function(){ return 'sms:?&body=' + encodeURIComponent(MSG); },
+  em:  function(){ return 'mailto:?subject=' + encodeURIComponent('Join me on BAWAXICT FamilyHub')
+                        + '&body=' + encodeURIComponent(MSG); }
+};
+
+Array.prototype.forEach.call(document.querySelectorAll('.share'),function(btn){
+  btn.addEventListener('click',function(){
+    var t=btn.getAttribute('data-t');
+    if(t==='more'){
+      if(navigator.share) navigator.share({title:'BAWAXICT FamilyHub',text:MSG,url:INVITE}).catch(function(){});
+      return;
+    }
+    var url=TARGETS[t]&&TARGETS[t]();
+    if(!url) return;
+    /* sms: and mailto: must navigate; http(s) opens in a new tab so the
+       user does not lose their FamilyHub session. */
+    if(t==='sms'||t==='em') location.href=url;
+    else window.open(url,'_blank','noopener');
+  });
+});
+
+/* Native share sheet (Android/iOS) exposes every installed app, which is the
+   best result on the phones this is actually used on. */
+if(navigator.share) $('moreBtn').style.display='';
+
+$('copyBtn').addEventListener('click',function(){
+  var box=$('link'); box.focus(); box.select();
+  try{ box.setSelectionRange(0,999); }catch(e){}
+  function done(ok){
+    $('copied').textContent = ok ? '✓ Invite link copied' : 'Select the link above and copy it manually.';
+    $('copied').style.color = ok ? 'var(--fh-green-600)' : 'var(--fh-danger)';
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(INVITE).then(function(){done(true)}).catch(function(){
+      var ok=false; try{ok=document.execCommand('copy')}catch(e){} done(ok);
+    });
+  }else{ var ok=false; try{ok=document.execCommand('copy')}catch(e){} done(ok); }
+});
+
+function fmtHrs(sec){
+  sec=Math.max(0,Number(sec)||0);
+  var h=Math.floor(sec/3600), m=Math.round((sec%3600)/60);
+  if(h&&m) return h+'h '+m+'m';
+  if(h) return h+'h';
+  return m+'m';
+}
+
+fetch(API+'/session',{credentials:'include'}).then(function(r){return r.json()}).then(function(s){
+  $('wifiDot').className='fh-dot'+(s.authenticated?'':' off');
+  $('wifiTxt').textContent=s.authenticated?('Connected · '+s.username):'Not signed in';
+}).catch(function(){ $('wifiDot').className='fh-dot off'; $('wifiTxt').textContent='Offline'; });
+
+/* Real reward data only. */
+fetch(API+'/rewards/mine',{credentials:'include'}).then(function(r){
+  if(!r.ok) throw new Error('x'); return r.json();
+}).then(function(d){
+  var now=Number(d.chatSeconds||0), goal=Number(d.thresholdSeconds||0);
+  var pct = goal ? Math.min(100, Math.round(now/goal*100)) : 0;
+  $('progBar').style.width = pct+'%';
+  $('progNow').textContent = fmtHrs(now)+' active';
+  $('progGoal').textContent = d.label || 'Free data reward';
+  $('progNote').textContent = d.eligible
+    ? 'You have earned ' + (d.label||'a reward') + '. Check the rewards card on the home feed to claim it.'
+    : 'Stay active for ' + fmtHrs(d.secondsToNext||0) + ' more to unlock ' + (d.label||'your next reward') + '.';
+}).catch(function(){
+  $('progNote').textContent='Sign in on the community page to see your reward progress.';
+  $('progNow').textContent='—'; $('progGoal').textContent='—';
+});
+})();
+</script>
+</body>
+</html>

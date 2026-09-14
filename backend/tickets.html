@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BAWAX ICT | Connect to FamilyHub</title>
+<link rel="stylesheet" href="css/bawaxict.css">
+<link rel="stylesheet" href="css/mobile-safe.css">
+
+<style>
+html,body{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden;
+}
+body{
+  -webkit-text-size-adjust:100%;
+  touch-action:manipulation;
+  background:#f5f8f6;
+}
+*{box-sizing:border-box}
+
+button,.btn,input,select{
+  min-height:44px;
+  touch-action:manipulation;
+}
+
+.page{
+  min-height:100vh;
+}
+
+/* HEADER */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:18px clamp(16px,4vw,48px);
+  background:#fff;
+  border-bottom:1px solid rgba(15,70,54,.08);
+  position:sticky;
+  top:0;
+  z-index:20;
+}
+
+.brand img{
+  max-height:42px;
+  width:auto;
+}
+
+/* HERO */
+.connect-hero{
+  position:relative;
+  overflow:hidden;
+  padding:clamp(42px,7vw,82px) clamp(18px,5vw,70px);
+  background:
+    radial-gradient(circle at 85% 15%,rgba(255,170,72,.25),transparent 28%),
+    linear-gradient(135deg,#083f31 0%,#087052 55%,#0b8661 100%);
+  color:#fff;
+}
+
+.connect-hero:after{
+  content:"";
+  position:absolute;
+  width:320px;
+  height:320px;
+  border-radius:50%;
+  right:-120px;
+  bottom:-170px;
+  background:rgba(255,255,255,.08);
+}
+
+.hero-inner{
+  position:relative;
+  z-index:2;
+  max-width:1180px;
+  margin:0 auto;
+}
+
+.eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:8px 12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.16);
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.connect-hero h1{
+  max-width:760px;
+  margin:18px 0 14px;
+  font-size:clamp(36px,6vw,68px);
+  line-height:1.02;
+  letter-spacing:-.045em;
+}
+
+.connect-hero h1 span{
+  color:#ffd08a;
+}
+
+.hero-copy{
+  max-width:680px;
+  color:rgba(255,255,255,.86);
+  font-size:clamp(16px,2vw,20px);
+  line-height:1.65;
+  margin:0;
+}
+
+.hero-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:28px;
+}
+
+.hero-actions .btn{
+  border-radius:14px;
+  padding:13px 19px;
+  font-weight:800;
+}
+
+.hero-actions .primary{
+  background:#fff;
+  color:#07533f;
+  border:1px solid #fff;
+}
+
+.hero-actions .secondary{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.35);
+  background:rgba(255,255,255,.08);
+}
+
+/* BENEFITS */
+.section{
+  width:min(1180px,calc(100% - 32px));
+  margin:0 auto;
+  padding:48px 0;
+}
+
+.benefit-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:16px;
+}
+
+.benefit{
+  background:#fff;
+  border:1px solid rgba(15,70,54,.08);
+  border-radius:20px;
+  padding:22px;
+  box-shadow:0 8px 28px rgba(16,55,43,.06);
+}
+
+.benefit-icon{
+  width:48px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  border-radius:15px;
+  background:#e7f5ef;
+  font-size:23px;
+  margin-bottom:15px;
+}
+
+.benefit strong{
+  display:block;
+  font-size:16px;
+  color:#103f32;
+  margin-bottom:6px;
+}
+
+.benefit p{
+  margin:0;
+  color:#687870;
+  font-size:14px;
+  line-height:1.55;
+}
+
+/* SECTION HEAD */
+.section-heading{
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  gap:20px;
+  margin-bottom:22px;
+}
+
+.section-heading h2{
+  margin:0 0 7px;
+  color:#123f32;
+  font-size:clamp(25px,4vw,38px);
+  letter-spacing:-.03em;
+}
+
+.section-heading p{
+  margin:0;
+  color:#718079;
+}
+
+/* TICKETS */
+.ticket-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:18px;
+}
+
+.ticket-card{
+  position:relative;
+  overflow:hidden;
+  background:#fff;
+  border:1px solid rgba(15,70,54,.09);
+  border-radius:24px;
+  padding:26px;
+  box-shadow:0 10px 35px rgba(16,55,43,.07);
+  transition:transform .2s ease,box-shadow .2s ease;
+}
+
+.ticket-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 16px 42px rgba(16,55,43,.11);
+}
+
+.ticket-card.featured{
+  border:2px solid #0a805d;
+}
+
+.ticket-card.featured:before{
+  content:"BEST VALUE";
+  position:absolute;
+  top:0;
+  right:0;
+  background:#0a805d;
+  color:#fff;
+  font-size:11px;
+  font-weight:900;
+  padding:8px 13px;
+  border-radius:0 0 0 14px;
+  letter-spacing:.05em;
+}
+
+.ticket-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  color:#7a8781;
+  font-size:13px;
+  margin-bottom:20px;
+}
+
+.ticket-tag{
+  display:inline-flex;
+  padding:7px 10px;
+  border-radius:999px;
+  background:#e9f6f0;
+  color:#087052;
+  font-size:11px;
+  font-weight:900;
+}
+
+.ticket-card h3{
+  margin:0;
+  font-size:38px;
+  color:#103f32;
+  letter-spacing:-.04em;
+}
+
+.ticket-card p{
+  min-height:48px;
+  margin:8px 0 20px;
+  color:#6d7b74;
+  line-height:1.55;
+}
+
+.ticket-price{
+  font-size:31px;
+  font-weight:900;
+  color:#087052;
+  margin-bottom:18px;
+}
+
+.ticket-price small{
+  font-size:13px;
+  font-weight:600;
+  color:#7b8882;
+}
+
+.buy-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  border-radius:14px;
+  padding:13px 16px;
+  text-decoration:none;
+  font-weight:900;
+  background:#087052;
+  color:#fff;
+}
+
+.ticket-note{
+  display:block;
+  margin-top:11px;
+  color:#89948f;
+  font-size:12px;
+  text-align:center;
+}
+
+/* COMMUNITY PROMO */
+.community-promo{
+  display:grid;
+  grid-template-columns:1.35fr .65fr;
+  gap:20px;
+  align-items:stretch;
+}
+
+.promo-main{
+  border-radius:25px;
+  padding:30px;
+  color:#fff;
+  background:
+    radial-gradient(circle at 90% 20%,rgba(255,180,83,.22),transparent 30%),
+    linear-gradient(135deg,#0b5d47,#087052);
+}
+
+.promo-main h2{
+  margin:0 0 10px;
+  font-size:clamp(26px,4vw,40px);
+  letter-spacing:-.035em;
+}
+
+.promo-main p{
+  max-width:650px;
+  margin:0;
+  color:rgba(255,255,255,.82);
+  line-height:1.65;
+}
+
+.promo-main .btn{
+  display:inline-flex;
+  margin-top:20px;
+  background:#fff;
+  color:#07533f;
+  border-radius:13px;
+  font-weight:900;
+  padding:12px 17px;
+  text-decoration:none;
+}
+
+.promo-side{
+  background:#fff;
+  border:1px solid rgba(15,70,54,.08);
+  border-radius:25px;
+  padding:26px;
+}
+
+.promo-side strong{
+  color:#103f32;
+  font-size:17px;
+}
+
+.promo-side p{
+  color:#718079;
+  line-height:1.6;
+  font-size:14px;
+}
+
+/* FOOTER CARD */
+.next-card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  padding:24px;
+  background:#fff;
+  border:1px solid rgba(15,70,54,.08);
+  border-radius:20px;
+}
+
+.next-card strong{
+  color:#103f32;
+}
+
+.next-card p{
+  margin:5px 0 0;
+  color:#748079;
+  font-size:13px;
+  line-height:1.5;
+}
+
+/* MOBILE */
+@media(max-width:850px){
+  .benefit-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .community-promo{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:600px){
+  .topbar{
+    padding:13px 12px;
+  }
+
+  .brand img{
+    max-width:145px;
+    max-height:36px;
+  }
+
+  .connect-hero{
+    padding:42px 20px 48px;
+  }
+
+  .connect-hero h1{
+    font-size:40px;
+  }
+
+  .hero-copy{
+    font-size:16px;
+  }
+
+  .hero-actions{
+    display:grid;
+    grid-template-columns:1fr;
+  }
+
+  .hero-actions .btn{
+    width:100%;
+    text-align:center;
+  }
+
+  .section{
+    width:calc(100% - 24px);
+    padding:34px 0;
+  }
+
+  .benefit-grid,
+  .ticket-grid{
+    grid-template-columns:1fr;
+  }
+
+  .benefit{
+    padding:19px;
+  }
+
+  .ticket-card{
+    padding:22px;
+  }
+
+  .ticket-card p{
+    min-height:0;
+  }
+
+  .section-heading{
+    display:block;
+  }
+
+  .next-card{
+    display:block;
+  }
+
+  .next-card .btn{
+    display:block;
+    margin-top:16px;
+    text-align:center;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <img src="assets/bawaxict-logo.png" alt="BAWAX ICT">
+  </a>
+  <a class="btn btn-outline" href="index.html">← Back to Portal</a>
+</header>
+
+<!-- HERO -->
+<section class="connect-hero">
+  <div class="hero-inner">
+    <div class="eyebrow">⚡ BAWAXICT INTERNET + FAMILYHUB</div>
+
+    <h1>
+      Connect to more than WiFi.<br>
+      Connect to <span>your community.</span>
+    </h1>
+
+    <p class="hero-copy">
+      Get reliable internet access and step into the BAWAXICT FamilyHub —
+      a growing digital community for connection, conversation, learning,
+      opportunities and everyday local value.
+    </p>
+
+    <div class="hero-actions">
+      <a class="btn primary" href="index.html">Enter FamilyHub Free →</a>
+      <a class="btn secondary" href="#tickets">Choose an Internet Plan</a>
+    </div>
+  </div>
+</section>
+
+<!-- VALUE -->
+<section class="section">
+  <div class="section-heading">
+    <div>
+      <h2>Why connect with BAWAXICT?</h2>
+      <p>Your internet access opens the door to more.</p>
+    </div>
+  </div>
+
+  <div class="benefit-grid">
+    <article class="benefit">
+      <div class="benefit-icon">📶</div>
+      <strong>Stay connected</strong>
+      <p>Choose a data plan that matches your daily or monthly internet needs.</p>
+    </article>
+
+    <article class="benefit">
+      <div class="benefit-icon">💬</div>
+      <strong>Join FamilyHub</strong>
+      <p>Enter the community and stay connected with people, conversations and updates.</p>
+    </article>
+
+    <article class="benefit">
+      <div class="benefit-icon">🎓</div>
+      <strong>Learn & grow</strong>
+      <p>Discover skills, useful knowledge, opportunities and community activities.</p>
+    </article>
+
+    <article class="benefit">
+      <div class="benefit-icon">🤝</div>
+      <strong>Be part of it</strong>
+      <p>BAWAXICT is building a useful digital space around real people and local value.</p>
+    </article>
+  </div>
+</section>
+
+<!-- TICKETS -->
+<section class="section" id="tickets">
+  <div class="section-heading">
+    <div>
+      <h2>Choose your connection</h2>
+      <p>Simple plans for today, this week or the month.</p>
+    </div>
+  </div>
+
+  <div class="ticket-grid">
+
+    <article class="ticket-card">
+      <div class="ticket-top">
+        <span class="ticket-tag">POPULAR</span>
+        <span>24-hour plan</span>
+      </div>
+
+      <h3>1GB</h3>
+      <p>Good for messaging, browsing and light social use.</p>
+
+      <div class="ticket-price">
+        ₦100 <small>/ plan</small>
+      </div>
+
+      <a class="buy-btn" href="tel:08086375415">
+        BUY 1GB • Call Desk
+      </a>
+
+      <small class="ticket-note">Online payment will be connected later.</small>
+    </article>
+
+    <article class="ticket-card">
+      <div class="ticket-top">
+        <span class="ticket-tag">VALUE</span>
+        <span>24-hour plan</span>
+      </div>
+
+      <h3>2GB</h3>
+      <p>More room for browsing, social media and everyday use.</p>
+
+      <div class="ticket-price">
+        ₦200 <small>/ plan</small>
+      </div>
+
+      <a class="buy-btn" href="tel:08086375415">
+        BUY 2GB • Call Desk
+      </a>
+
+      <small class="ticket-note">Online payment will be connected later.</small>
+    </article>
+
+    <article class="ticket-card">
+      <div class="ticket-top">
+        <span class="ticket-tag">MONTHLY</span>
+        <span>30-day plan</span>
+      </div>
+
+      <h3>50GB</h3>
+      <p>A balanced monthly package for regular browsing and streaming.</p>
+
+      <div class="ticket-price">
+        ₦6,500 <small>/ month</small>
+      </div>
+
+      <a class="buy-btn" href="tel:08086375415">
+        BUY 50GB • Call Desk
+      </a>
+
+      <small class="ticket-note">Online payment will be connected later.</small>
+    </article>
+
+    <article class="ticket-card featured">
+      <div class="ticket-top">
+        <span class="ticket-tag">BEST VALUE</span>
+        <span>30-day plan</span>
+      </div>
+
+      <h3>100GB</h3>
+      <p>Our larger monthly option for heavier everyday usage.</p>
+
+      <div class="ticket-price">
+        ₦12,000 <small>/ month</small>
+      </div>
+
+      <a class="buy-btn" href="tel:08086375415">
+        BUY 100GB • Call Desk
+      </a>
+
+      <small class="ticket-note">Online payment will be connected later.</small>
+    </article>
+
+  </div>
+</section>
+
+<!-- FAMILYHUB PROMO -->
+<section class="section">
+  <div class="community-promo">
+
+    <div class="promo-main">
+      <h2>Internet is only the beginning.</h2>
+      <p>
+        FamilyHub brings the community side of BAWAXICT to life —
+        conversations, people, learning, opportunities, services and
+        useful updates in one growing digital space.
+      </p>
+      <a class="btn" href="index.html">Enter Community Free →</a>
+    </div>
+
+    <div class="promo-side">
+      <strong>💡 No ticket? You can still explore.</strong>
+      <p>
+        FamilyHub community access is designed to let visitors enter
+        the community without first buying an internet ticket.
+      </p>
+      <a class="btn btn-outline" href="index.html">Explore FamilyHub</a>
+    </div>
+
+  </div>
+</section>
+
+<section class="section">
+  <div class="next-card">
+    <div>
+      <strong>🚀 More connection options are coming</strong>
+      <p>
+        Online ticket purchase and automatic MikroTik ticket delivery
+        can be connected later without changing this customer-facing layout.
+      </p>
+    </div>
+
+    <a class="btn btn-outline" href="index.html">← Back to Portal</a>
+  </div>
+</section>
+
+</div>
+</body>
+</html>
