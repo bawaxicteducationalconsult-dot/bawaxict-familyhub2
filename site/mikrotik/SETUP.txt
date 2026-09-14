@@ -15,3 +15,39 @@ BAWAX ICT MIKROTIK HOTSPOT — PRODUCTION V2
 The RSC now creates the main LAN DHCP pool before the DHCP server references it,
 removes the self-referencing next-pool setting, and includes a baseline firewall.
 Test in a maintenance window and keep a rollback backup.
+
+--------------------------------------------------------------------
+POST-LOGIN REDIRECT (added in post-launch-fixes)
+--------------------------------------------------------------------
+Users should land on the community feed after connecting, not on the
+old portal shell.
+
+Three changes work together; all three are required:
+
+ 1. /ip hotspot profile now sets
+      login-page-redirect="https://bawaxict-familyhub2.pages.dev/forum"
+    RouterOS otherwise sends the user to whatever URL their phone was
+    originally probing, which is why the landing page looked random.
+
+ 2. Walled garden allows bawaxict-familyhub2.pages.dev (and *.pages.dev)
+    plus an explicit 443/tcp rule. The previous config had NO HTTPS rule
+    at all, so the hosted site was unreachable before buying a ticket and
+    the redirect would have failed even once set.
+
+ 3. site/tickets.html "Enter FamilyHub" / "Enter Community" / "Explore
+    FamilyHub" now point at /forum. They previously pointed at
+    index.html. "Back to Portal" and the brand logo still go to
+    index.html, which is intended.
+
+VERIFY ON HARDWARE. RouterOS is version-sensitive here:
+  - login-page-redirect exists on RouterOS 6.4x; on some builds the
+    equivalent is set per-user via the "Advertise" / redirect URL, or in
+    HOTSPOT1/alogin.html. If the import rejects the property, set the
+    redirect in alogin.html instead:
+        <meta http-equiv="refresh" content="0; url=https://bawaxict-familyhub2.pages.dev/forum">
+  - dst-host walled-garden matching relies on SNI/Host. Confirm with a
+    real handset on the hotspot, pre-ticket, that the feed loads.
+
+Note: the hotspot HTML directory (HOTSPOT1) lives on the router itself
+and is not in this repo, so its login/alogin pages could not be updated
+here. If those pages hardcode a destination, update them on the router.

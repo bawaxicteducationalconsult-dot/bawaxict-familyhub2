@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#123B2C">
 <title>BAWAXICT FamilyHub | Community</title>
 <link rel="stylesheet" href="css/bawaxict.css">
@@ -36,10 +36,14 @@ img{display:block;max-width:100%}
 
 .shell{display:grid;grid-template-columns:248px 1fr 300px;max-width:1360px;margin:0 auto;min-height:100vh}
 @media (max-width:1100px){.shell{grid-template-columns:220px 1fr}.rail-right{display:none}}
-@media (max-width:860px){.shell{grid-template-columns:1fr}.rail-left{display:none}}
+
 
 /* left rail */
 .rail-left{padding:22px 16px;display:flex;flex-direction:column;gap:22px;position:sticky;top:0;height:100vh}
+/* Mobile hide MUST come after .rail-left's display:flex above: at equal
+   specificity the later rule wins, so the original ordering left the nav
+   rail rendering full-width on phones and pushing the page sideways. */
+@media (max-width:860px){.shell{grid-template-columns:1fr}.rail-left{display:none}}
 .brand{display:flex;align-items:center;gap:10px;padding:0 8px}
 .brand-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(160deg,var(--green-600),var(--green-900));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;flex-shrink:0;overflow:hidden}
 .brand-mark img{width:100%;height:100%;object-fit:cover}
@@ -106,6 +110,11 @@ img{display:block;max-width:100%}
 
 /* right rail */
 .rail-right{padding:20px 18px;display:flex;flex-direction:column;gap:16px;position:sticky;top:0;height:100vh;overflow:auto}
+/* Mobile/tablet hide MUST come after the .rail-right base rule above:
+   at equal specificity the later declaration wins, so declaring the
+   media query earlier left the right rail rendering and pushing the
+   page sideways. Same class of bug as .rail-left. */
+@media (max-width:1100px){.rail-right{display:none}}
 .rr-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:16px}
 .rr-title{font-size:13.5px;font-weight:800;margin-bottom:10px}
 .status-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px}
@@ -152,6 +161,20 @@ img{display:block;max-width:100%}
 .pp-field label{font-size:11px;font-weight:700;color:var(--ink-500);display:block;margin:10px 0 4px}
 .pp-field input,.pp-field select{width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit}
 #profileSaveBtn{width:100%;margin-top:14px;padding:11px;border-radius:999px;background:var(--green-700);color:#fff;font-weight:700;font-size:13px}
+
+/* Mobile pass (measured at 360x740). */
+@media (max-width:860px){
+  /* .main keeps 1px borders from the desktop 3-column shell, which in a
+     1fr grid track adds up to a body 2px wider than the viewport and
+     lets the page drag sideways. Drop them on mobile. */
+  .main{border-left:0;border-right:0}
+  .shell{max-width:100%;overflow-x:hidden}
+  #gateName,.gate-card input{font-size:16px}
+  .meta{font-size:12.5px}
+  .bn-item{min-height:48px;min-width:44px;justify-content:center}
+  .icon-btn{min-width:40px;min-height:40px}
+  .hotspot-cta{min-height:44px;display:flex;align-items:center;justify-content:center}
+}
 </style>
 </head>
 <body>

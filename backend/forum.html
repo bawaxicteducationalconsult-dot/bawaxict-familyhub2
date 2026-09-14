@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#123B2C">
 <meta http-equiv="Cache-Control" content="no-store">
 <title>BAWAXICT FamilyHub | Community Feed</title>
@@ -158,6 +158,11 @@ img{display:block;max-width:100%}
 
 /* right rail */
 .rail-right{padding:20px 18px;display:flex;flex-direction:column;gap:16px;position:sticky;top:0;height:100vh;overflow:auto}
+/* Mobile/tablet hide MUST come after the .rail-right base rule above:
+   at equal specificity the later declaration wins, so declaring the
+   media query earlier left the right rail rendering and pushing the
+   page sideways. Same class of bug as .rail-left. */
+@media (max-width:1100px){.rail-right{display:none}}
 .rr-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:16px}
 .rr-title{font-size:13.5px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .status-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px}
@@ -198,6 +203,16 @@ img{display:block;max-width:100%}
   .bn-item .count-badge{top:-6px;right:8px}
   .bn-fab{width:42px;height:42px;border-radius:14px;background:var(--green-700);color:#fff;display:flex;align-items:center;justify-content:center;margin-top:-22px;box-shadow:0 6px 14px rgba(29,107,76,.35)}
   .bn-fab svg{width:20px;height:20px}
+}
+
+/* Mobile touch-target + input-zoom pass (measured at 360x740). */
+@media (max-width:860px){
+  .bn-item{min-height:48px;justify-content:center}
+  .icon-btn{min-width:40px;min-height:40px}
+  .hotspot-cta,.msg-open{min-height:44px;display:flex;align-items:center;justify-content:center}
+  .gate-card input,#gateName,#gateRecovery,#composerText{font-size:16px}
+  .cs-badge{font-size:11px}
+  .reward-sub,.cs-note{font-size:12px}
 }
 
 /* overlays: gate / recovery / profile / report / author / notifications */

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-store">
 <title>BAWAX ICT | Arcade Zone</title>
 <link rel="stylesheet" href="css/bawaxict.css">
@@ -19,6 +19,14 @@
 .game-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.55;flex:1}
 .hi{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--green);font-weight:800}
 @media(max-width:560px){.game-grid{grid-template-columns:1fr}}
+
+/* Mobile pass: eyebrow/high-score text was 10-11px. */
+@media (max-width:900px){
+  .eyebrow{font-size:12px}
+  .navcard span,.card p,.hi,p,b,span{font-size:12.5px !important}
+  h1,h2,h3,strong{font-size:unset}
+  .btn,.navcard{min-height:44px}
+}
 </style>
 
 <style id="BAWAX Mobile Game Zone landing fixes">

@@ -825,3 +825,107 @@ service catalog + "My requests", and the real member/post counts on `status.html
 - [x] Inventory + endpoint map written (this file)
 - [ ] **BLOCKED on Q1–Q4** — no page code written yet, per "do not start building
       until this plan is written" + "stop and ask rather than proceeding"
+
+---
+
+# POST-LAUNCH FIXES (branch `post-launch-fixes`, from `6e75ea1`)
+
+## P1. Site root now serves the feed
+
+`_redirects` added: `/ -> /forum` (302), plus `/home`, `/feed`, and the
+retired `/chat` paths.
+
+Chose a redirect over copying `forum.html` into `index.html`: forum.html is
+105KB, so duplicating it means two copies of the whole feed app to keep in
+sync forever, and ~10 pages still link to `index.html` directly so the file
+has to keep working. `_routes.json` scopes the Worker to `/familyhub/*`, so
+the root is handled by the static asset layer — exactly what `_redirects`
+governs. 302 not 301, because a permanent redirect is cached hard and is
+painful to reverse.
+
+## P2. Post-connect redirect
+
+Three independent things were sending users to the wrong page:
+
+1. `tickets.html` is the hotspot landing page and its "Enter FamilyHub Free",
+   "Enter Community Free" and "Explore FamilyHub" buttons all pointed at
+   `index.html`. Now `/forum`. ("Back to Portal" and the brand logo still go
+   to index.html — intended.)
+2. `/ip hotspot profile` had **no** `login-page-redirect`, so RouterOS sent
+   the user to whatever URL their phone was probing. Now set to
+   `https://bawaxict-familyhub2.pages.dev/forum`.
+3. The walled garden had **no HTTPS rule at all** — only two 8080/tcp
+   entries. The hosted site was unreachable pre-ticket, so the redirect
+   would have failed even once configured. Added `dst-host` entries for the
+   Pages hostname plus explicit 443/tcp.
+
+**Needs hardware verification.** `login-page-redirect` is RouterOS-version
+sensitive; `SETUP.txt` documents an `alogin.html` meta-refresh fallback. The
+`HOTSPOT1` html-directory lives on the router and is not in this repo, so if
+those login pages hardcode a destination they must be updated there.
+
+## P3. Router status page rebuilt
+
+New `site/mikrotik/hotspot-html/status.html`, matching `site/status.html`.
+
+It is served by the **router**, so it cannot link `css/familyhub-mockup.css`
+— the router does not serve that file and a pre-auth client cannot reach a
+CDN. Tokens are copied inline; the page is fully self-contained. Uses real
+RouterOS substitutions (`$(username)`, `$(uptime)`, `$(bytes-in-nice)`,
+`$(bytes-out-nice)`, `$(ip)`, `$(link-logout)`). README covers install and
+verification.
+
+## P4. Chat live delivery — root cause and fix
+
+**Not** a URL mismatch. `private-chat.html` connects to `/stream` via
+`config.js`, `server.py` serves `/api/stream`, and the worker maps them
+correctly. Verified the server pushes a frame ~2s after a message is sent.
+
+The bug: `server.py` closes every SSE stream after `SSE_MAX_SECONDS` (55s)
+**by design**, so the client must reconnect for the life of the page. It only
+reconnected from `es.onerror`, and a clean server-side close does not
+reliably fire an error event. After the first 55s the stream went silent
+permanently — matching "only appears after a manual refresh".
+
+Measured before: t=0..52s delivered <1s; **every** message from t=64s onward
+not delivered; one `/stream` connection for the session; no reconnect.
+
+Fixed by recycling the stream at 50s (ahead of the server cutoff), adding a
+30s idle watchdog (server keepalive is 15s), reconnecting with bounded
+backoff, deduping on `lastEventId`, refreshing on tab focus and `online`, and
+**always** running a 6s `/events` poll as a safety net.
+
+Measured after: **8/8 within 1s** across 100s with a clean reconnect at 50s.
+With `/stream` blocked outright at the network layer, **3/3** still arrive via
+the poll in 3–6s.
+
+## P5. Mobile optimization
+
+Audited all 12 rebuilt pages at 360x740 measuring real metrics.
+
+Structural bugs found:
+- `index.html` had the same CSS source-order bug already fixed in
+  `forum.html` (`@media` hide declared *before* `.rail-left{display:flex}`)
+- `.rail-right` had the identical bug in **both** `index.html` and `forum.html`
+- `index.html` could be dragged sideways: `.main` keeps 1px borders from the
+  desktop 3-column shell, making the body 2px wider than the viewport
+- `services.html` / `discover.html` put search + CTA on one row; at 360px the
+  input collapsed to ~60px (now 332px, stacked)
+- `services.html` filter chips had `overflow-x:auto` but shrinking children,
+  so the last chip spilled the page instead of scrolling
+- `status.html` 3-column grids could not hold readable label text at 360px
+
+Systemic, in `css/familyhub-mockup.css`: all form controls 16px on small
+screens (under 16px iOS Safari zooms the page on focus and the zoom persists
+after blur), 44x44 minimum touch targets, scrollable filter strips,
+`overflow-wrap:anywhere`, and `prefers-reduced-motion` support.
+
+Result: **0px overflow and no sideways drag on all 12 pages**, no JS errors.
+No page locks zoom (`user-scalable=no` appears nowhere).
+
+## Still open
+
+- MikroTik `.147` vs `.191` — confirm on hardware.
+- `tickets.html` is in the main nav but not redesigned; its layout is older
+  than the pages around it (mobile text/tap sizing was fixed here).
+- Marketplace `do_GET`/`do_POST` bug — still deliberately untouched.
