@@ -236,3 +236,61 @@ textarea.fh-input{resize:vertical;min-height:96px;line-height:1.55}
   .fh-tabbar{display:flex}
   body.has-tabbar{padding-bottom:74px}
 }
+
+/* ==========================================================================
+   MOBILE OPTIMIZATION PASS
+   Measured at 360x740 (common low-end Android) across every rebuilt page.
+   ========================================================================== */
+@media (max-width:900px){
+
+  /* iOS Safari zooms the whole page when a focused input's font-size is
+     under 16px. Every form control therefore goes to 16px on small
+     screens; this is the single most disruptive mobile bug because the
+     zoom persists after blur and leaves the layout shifted. */
+  .fh-input,
+  input[type=text],input[type=search],input[type=email],
+  input[type=tel],input[type=number],input[type=password],
+  textarea,select{ font-size:16px }
+
+  /* WCAG 2.5.8 / platform guidance: 44x44 minimum touch target.
+     Buttons and nav links were rendering 31-37px tall. */
+  .fh-btn{ min-height:44px }
+  .fh-btn-sm{ min-height:40px; padding:9px 16px }
+  .fh-nav-item{ min-height:44px }
+  .fh-tab{ min-height:40px }
+  .icon-btn,.fh-x{ min-width:40px; min-height:40px }
+
+  /* Tab bar items were 56x36. */
+  .fh-tabbar a{ min-height:48px; justify-content:center }
+
+  /* Supporting copy under 11px is unreadable at arm's length outdoors,
+     which is the actual usage context for a hotspot portal. */
+  .fh-badge{ font-size:12px }
+  .fh-muted{ font-size:13px }
+
+  /* Filter/tab strips must scroll rather than force the page sideways.
+     services.html's category row was overflowing the viewport by ~26px. */
+  .filters,.fh-tabs,.tabs{
+    overflow-x:auto; flex-wrap:nowrap;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .filters::-webkit-scrollbar,
+  .fh-tabs::-webkit-scrollbar,
+  .tabs::-webkit-scrollbar{ display:none }
+  .filters > *,.fh-tabs > *,.tabs > *{ flex:0 0 auto }
+}
+
+/* Long unbroken strings (URLs, invite links, usernames) are the most
+   common cause of horizontal overflow on narrow screens. */
+.fh-card,.fh-input,.bub,.post-body{ overflow-wrap:anywhere }
+
+/* Respect the OS reduced-motion setting. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}

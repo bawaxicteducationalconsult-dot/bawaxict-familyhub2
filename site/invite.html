@@ -61,6 +61,17 @@ h3{font-size:14px;font-weight:800;color:var(--fh-green-900);margin:22px 0 10px}
 .prog i{display:block;height:100%;width:0;border-radius:999px;
   background:linear-gradient(90deg,var(--fh-green-500),var(--fh-green-600));transition:width .5s}
 @media(max-width:900px){.wrap{padding:16px 14px 90px}}
+
+/* Mobile pass: the invite link field is monospace and long; keep it
+   16px to avoid focus-zoom and let it wrap rather than overflow. */
+@media (max-width:900px){
+  .linkbox{flex-wrap:wrap}
+  .linkbox input{font-size:16px;min-height:46px;flex:1 1 100%}
+  #copyBtn{flex:1 1 100%;min-height:44px}
+  .share{min-height:56px}
+  .topbar .fh-btn{min-height:44px}
+  .topbar{padding:0 14px}
+}
 </style>
 </head>
 <body class="has-tabbar">

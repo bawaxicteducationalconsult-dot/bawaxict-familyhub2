@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>BAWAX ICT | Connect to FamilyHub</title>
 <link rel="stylesheet" href="css/bawaxict.css">
 <link rel="stylesheet" href="css/mobile-safe.css">
@@ -472,6 +472,15 @@ button,.btn,input,select{
     margin-top:16px;
     text-align:center;
   }
+}
+
+/* Mobile pass: ticket copy was 11px; brand link under 44px. */
+@media (max-width:900px){
+  .ticket-tag{font-size:12px}
+  .card p,.ticket p{font-size:13px}
+  .brand{min-height:44px;display:inline-flex;align-items:center}
+  p,.muted,.small{font-size:13px !important}
+  .btn{min-height:46px;display:inline-flex;align-items:center;justify-content:center}
 }
 </style>
 </head>
