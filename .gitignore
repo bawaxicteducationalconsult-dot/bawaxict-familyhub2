@@ -12,3 +12,7 @@ backend/backups/
 *.save
 *.save.*
 *.bak-*
+backend/media/*
+!backend/media/.gitkeep
+backend/*.db-shm
+backend/*.db-wal
