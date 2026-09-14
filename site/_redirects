@@ -1,0 +1,21 @@
+# Cloudflare Pages redirects.
+#
+# The community feed is the product's front door. index.html is the older
+# static landing shell and is kept because ~10 pages still link to it
+# directly, but it is no longer what visitors get at the root.
+#
+# 302 (not 301) is deliberate: a permanent redirect is cached hard by
+# browsers and is painful to walk back if the root ever needs to change.
+#
+# Note: _routes.json scopes the Worker to /familyhub/* and /api/familyhub/*,
+# so the root is served by the static asset handler and this file governs it.
+# Pages resolves /forum -> forum.html automatically (clean URLs).
+
+/            /forum   302
+/home        /forum   302
+/feed        /forum   302
+
+# Retired in the mockup rebuild; keep old bookmarks and printed hotspot
+# tickets landing somewhere correct instead of on a 404.
+/chat        /forum   302
+/chat.html   /forum   302
