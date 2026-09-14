@@ -18,8 +18,13 @@ add name=LAN
 /interface wireless security-profiles
 set [ find default=yes ] supplicant-identity=MikroTik
 /ip hotspot profile
+# login-page-redirect sends a user to the community feed immediately after
+# a successful login, instead of the RouterOS default (the originally
+# requested URL, which is usually whatever the phone was probing).
+# Requires the walled-garden entries further down, or this URL cannot load.
 add dns-name=bawaxict.edu.net hotspot-address=192.168.6.1 html-directory=\
-    HOTSPOT1 login-by=http-chap name=hsprof1 use-radius=yes
+    HOTSPOT1 login-by=http-chap name=hsprof1 use-radius=yes \
+    login-page-redirect="https://bawaxict-familyhub2.pages.dev/forum"
 /ip pool
 add name=hs-pool-7 ranges=192.168.6.10-192.168.6.254
 add name=dhcp ranges=192.168.88.10-192.168.88.254
@@ -182,9 +187,18 @@ add name=bawax server=hotspot1
 add name=admin
 /ip hotspot walled-garden
 add comment="place hotspot rules here" disabled=yes
+# Allow the hosted FamilyHub front end before the user buys a ticket, so
+# "Enter FamilyHub" resolves instead of being bounced back to the login
+# page. Hostname rules live in the DNS-based walled garden; the IP list
+# below cannot match TLS SNI on its own.
+add action=allow comment="BAWAXICT FamilyHub on Cloudflare Pages" dst-host=bawaxict-familyhub2.pages.dev
+add action=allow comment="BAWAXICT FamilyHub - Cloudflare Pages wildcard" dst-host="*.pages.dev"
 /ip hotspot walled-garden ip
 add action=accept comment="BAWAXICT Community Chat - no ticket required" dst-address=192.168.6.147 dst-port=8080 protocol=tcp
 add action=accept comment="BAWAXICT FamilyHub hostname - no ticket required" dst-host=chat.bawaxict.edu.net dst-port=8080 protocol=tcp
+# HTTPS for the hosted front end. Without a 443 rule the walled garden
+# permits no TLS at all, so the Pages site is unreachable pre-auth.
+add action=accept comment="BAWAXICT FamilyHub HTTPS (Cloudflare Pages)" dst-host=bawaxict-familyhub2.pages.dev dst-port=443 protocol=tcp
 /radius
 add address=127.0.0.1 service=hotspot
 /radius incoming
