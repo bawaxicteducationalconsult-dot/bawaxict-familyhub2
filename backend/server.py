@@ -117,6 +117,8 @@ SERVICE_CATEGORIES= {"printing":"Printing & document services","design":"Graphic
 AI_LOCK = threading.Lock()
 ALLOWED_ORIGINS = {x.strip().rstrip('/') for x in os.environ.get('BAWAXICT_ALLOWED_ORIGINS','').split(',') if x.strip()}
 EVENT_RETENTION_SECONDS = 24 * 60 * 60
+# Mockup rebuild: a typing ping is considered live this long after its last update.
+TYPING_TTL_SECONDS = 8
 SSE_MAX_SECONDS = 55
 SSE_POLL_SECONDS = 0.75
 
@@ -367,6 +369,14 @@ def init_db():
             read_by_user INTEGER NOT NULL DEFAULT 0
         );
         CREATE INDEX IF NOT EXISTS idx_skill_messages_skill ON skill_messages(skill_id,id);
+        -- Mockup rebuild: ephemeral typing state for private chat. Additive only.
+        CREATE TABLE IF NOT EXISTS typing_state (
+            thread_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL,
+            UNIQUE(thread_id,user_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_typing_thread ON typing_state(thread_id,updated_at);
         """)
         # Additive migration for older databases created before the rewards program.
         for stmt in (
@@ -389,6 +399,9 @@ def init_db():
             "ALTER TABLE users ADD COLUMN whatsapp TEXT",
             "ALTER TABLE users ADD COLUMN social_link TEXT",
             "ALTER TABLE users ADD COLUMN hide_photo INTEGER NOT NULL DEFAULT 0",
+            # Mockup rebuild: delivery/seen receipts for private chat. Additive only.
+            "ALTER TABLE private_messages ADD COLUMN delivered_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE private_messages ADD COLUMN seen_at INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 con.execute(stmt)
@@ -449,6 +462,8 @@ def cleanup():
         con.execute("DELETE FROM private_messages WHERE created_at < ?",(now-PRIVATE_RETENTION,))
         con.execute("DELETE FROM private_reads WHERE thread_id NOT IN (SELECT id FROM threads)")
         con.execute("DELETE FROM events WHERE created_at < ?",(now-EVENT_RETENTION_SECONDS,))
+        # Mockup rebuild: typing pings are ephemeral; sweep anything past its TTL.
+        con.execute("DELETE FROM typing_state WHERE updated_at < ?",(now-TYPING_TTL_SECONDS,))
         expired=con.execute("SELECT id,storage_name FROM media WHERE expires_at < ?",(now,)).fetchall()
         for m in expired:
             try: (MEDIA_DIR / m['storage_name']).unlink(missing_ok=True)
@@ -598,10 +613,38 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def _do_GET(self):
         cleanup()
         parsed=urllib.parse.urlparse(self.path); path=parsed.path; params=urllib.parse.parse_qs(parsed.query)
-        if path in ('/','/chat','/chat.html'):
-            data=(BASE/'chat.html').read_bytes(); self.send_response(200); self.send_header('Content-Type','text/html; charset=utf-8'); self.send_header('Content-Length',str(len(data))); self.send_header('Cache-Control','no-store'); self.end_headers(); self.wfile.write(data); return
-        static={'/css/bawaxict.css':('css/bawaxict.css','text/css; charset=utf-8'),'/assets/bawaxict-logo.png':('assets/bawaxict-logo.png','image/png')}
-        if path in static:
+        # Mockup rebuild: the canonical entry point is now the rebuilt community feed.
+        # '/' serves forum.html directly (see MERGE_NOTES.md section N for reasoning).
+        # The legacy '/chat' and '/chat.html' paths redirect rather than 404 so that
+        # any bookmark, MikroTik walled-garden entry or printed ticket still lands
+        # somewhere correct after chat.html is retired.
+        if path in ('/','/forum','/forum.html'):
+            target=BASE/'forum.html'
+            if not target.exists(): target=BASE/'chat.html'
+            data=target.read_bytes(); self.send_response(200); self.send_header('Content-Type','text/html; charset=utf-8'); self.send_header('Content-Length',str(len(data))); self.send_header('Cache-Control','no-store'); self.end_headers(); self.wfile.write(data); return
+        if path in ('/chat','/chat.html'):
+            self.send_response(302); self.send_header('Location','/'); self.send_header('Cache-Control','no-store'); self.end_headers(); return
+        if path in ('/private-chat','/private-chat.html'):
+            target=BASE/'private-chat.html'
+            if target.exists():
+                data=target.read_bytes(); self.send_response(200); self.send_header('Content-Type','text/html; charset=utf-8'); self.send_header('Content-Length',str(len(data))); self.send_header('Cache-Control','no-store'); self.end_headers(); self.wfile.write(data); return
+        # Mockup rebuild: serve the rebuilt pages and their shared stylesheet.
+        # Additive whitelist -- still no directory traversal, same pattern as before.
+        page_map={'/discover.html':'discover.html','/services.html':'services.html',
+                  '/community-chat.html':'community-chat.html','/login.html':'login.html',
+                  '/status.html':'status.html','/marketplace.html':'marketplace.html',
+                  '/index.html':'index.html','/tickets.html':'tickets.html','/games.html':'games.html','/invite.html':'invite.html'}
+        if path in page_map:
+            fp=BASE/page_map[path]
+            if fp.exists():
+                data=fp.read_bytes(); self.send_response(200); self.send_header('Content-Type','text/html; charset=utf-8'); self.send_header('Content-Length',str(len(data))); self.send_header('Cache-Control','no-store'); self.end_headers(); self.wfile.write(data); return
+        static={'/css/bawaxict.css':('css/bawaxict.css','text/css; charset=utf-8'),
+                '/css/familyhub-mockup.css':('css/familyhub-mockup.css','text/css; charset=utf-8'),
+                '/css/mobile-safe.css':('css/mobile-safe.css','text/css; charset=utf-8'),
+                '/css/familyhub-social.css':('css/familyhub-social.css','text/css; charset=utf-8'),
+                '/config.js':('config.js','application/javascript; charset=utf-8'),
+                '/assets/bawaxict-logo.png':('assets/bawaxict-logo.png','image/png')}
+        if path in static and (BASE/static[path][0]).exists():
             rel,ctype=static[path]; data=(BASE/rel).read_bytes(); self.send_response(200); self.send_header('Content-Type',ctype); self.send_header('Content-Length',str(len(data))); self.send_header('Cache-Control','no-cache'); self.end_headers(); self.wfile.write(data); return
         if path.startswith('/api/media/'):
             try: mid=int(path.rsplit('/',1)[1])
@@ -654,6 +697,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
             send_json(self, {'activities': activities})
             return
 
+        if path=='/api/check-username':
+            # Mockup rebuild: backfills the endpoint site/login.html was already
+            # calling (and getting a 404 from). Read-only availability probe --
+            # it deliberately reveals nothing beyond "is this name taken", and
+            # does NOT bypass the recovery-code contract in /api/join.
+            name=params.get('name',[''])[0].strip()
+            if not valid_name(name):
+                send_json(self,{'available':False,'reason':'invalid',
+                                'error':'Use 3-24 letters, numbers, spaces, dot, dash or underscore.'}); return
+            con=db(); row=con.execute('SELECT 1 FROM users WHERE lower(username)=lower(?)',(name,)).fetchone(); con.close()
+            send_json(self,{'available':not row,'reason':('taken' if row else 'free')}); return
         if path=='/api/session':
             token=request_session_token(self)
             if not token:
@@ -943,10 +997,40 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if not t: con.close(); send_json(self,{'messages':[],'blocked':False,'thread':None}); return
                 blocked=con.execute('SELECT 1 FROM blocks WHERE (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)',(user['id'],other['id'],other['id'],user['id'])).fetchone()
                 if blocked: con.close(); send_json(self,{'messages':[],'blocked':True,'thread':t['id']}); return
-                rows=con.execute('SELECT pm.id,pm.sender_id,pm.recipient_id,pm.sender_snapshot,pm.message,pm.created_at, m.id AS attachment_id,m.kind AS attachment_kind,m.mime_type AS attachment_mime,m.original_name AS attachment_name,m.size_bytes AS attachment_size,m.expires_at AS attachment_expires FROM private_messages pm LEFT JOIN media m ON m.attached_message_id=pm.id AND m.expires_at>? WHERE pm.thread_id=? ORDER BY pm.id ASC LIMIT 150',(int(time.time()),t['id'])).fetchall(); out=[]
+                rows=con.execute('SELECT pm.id,pm.sender_id,pm.recipient_id,pm.sender_snapshot,pm.message,pm.created_at,pm.delivered_at,pm.seen_at, m.id AS attachment_id,m.kind AS attachment_kind,m.mime_type AS attachment_mime,m.original_name AS attachment_name,m.size_bytes AS attachment_size,m.expires_at AS attachment_expires FROM private_messages pm LEFT JOIN media m ON m.attached_message_id=pm.id AND m.expires_at>? WHERE pm.thread_id=? ORDER BY pm.id ASC LIMIT 150',(int(time.time()),t['id'])).fetchall(); out=[]
+                # Mockup rebuild: fetching a thread is proof of delivery to this device.
+                now_ts=int(time.time())
+                con.execute('UPDATE private_messages SET delivered_at=? WHERE thread_id=? AND recipient_id=? AND delivered_at=0',(now_ts,t['id'],user['id']))
+                con.commit()
                 for r in rows:
-                    d=dict(r); d['attachment'] = ({'id':r['attachment_id'],'kind':r['attachment_kind'],'mimeType':r['attachment_mime'],'filename':r['attachment_name'],'sizeBytes':r['attachment_size'],'expiresAt':r['attachment_expires']} if r['attachment_id'] else None); out.append(d)
+                    d=dict(r)
+                    if d['recipient_id']==user['id'] and not d['delivered_at']: d['delivered_at']=now_ts
+                    d['attachment'] = ({'id':r['attachment_id'],'kind':r['attachment_kind'],'mimeType':r['attachment_mime'],'filename':r['attachment_name'],'sizeBytes':r['attachment_size'],'expiresAt':r['attachment_expires']} if r['attachment_id'] else None); out.append(d)
                 con.close(); send_json(self,{'messages':out,'blocked':False,'thread':t['id']}); return
+            if path=='/api/typing':
+                # Mockup rebuild: who is currently typing to me in a thread.
+                # Typing is considered live for TYPING_TTL_SECONDS after the last ping.
+                if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
+                try: tid=int(params.get('threadId',['0'])[0] or 0)
+                except Exception: tid=0
+                if not tid: con.close(); send_json(self,{'typing':[]}); return
+                cutoff=int(time.time())-TYPING_TTL_SECONDS
+                rows=con.execute('SELECT u.username FROM typing_state t JOIN users u ON u.id=t.user_id '
+                                 'WHERE t.thread_id=? AND t.user_id<>? AND t.updated_at>=?',
+                                 (tid,user['id'],cutoff)).fetchall()
+                con.close(); send_json(self,{'typing':[r['username'] for r in rows]}); return
+            if path=='/api/receipts':
+                # Mockup rebuild: delivered/seen state for messages I sent in a thread.
+                if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
+                try: tid=int(params.get('threadId',['0'])[0] or 0)
+                except Exception: tid=0
+                if not tid: con.close(); send_json(self,{'receipts':[]}); return
+                rows=con.execute('SELECT id,delivered_at,seen_at FROM private_messages '
+                                 'WHERE thread_id=? AND sender_id=? ORDER BY id DESC LIMIT 150',
+                                 (tid,user['id'])).fetchall()
+                con.close()
+                send_json(self,{'receipts':[{'id':r['id'],'deliveredAt':int(r['delivered_at'] or 0),
+                                             'seenAt':int(r['seen_at'] or 0)} for r in rows]}); return
             if path=='/api/notifications':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
                 since=max(0,int(params.get('since',['0'])[0] or 0))
@@ -1500,10 +1584,29 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 t=get_thread(con,user['id'],other['id'],True);now=int(time.time());cur=con.execute('INSERT INTO private_messages(thread_id,sender_id,recipient_id,sender_snapshot,message,created_at) VALUES(?,?,?,?,?,?)',(t['id'],user['id'],other['id'],user['username'],message,now)); msg_id=cur.lastrowid
                 if attachment_id: con.execute('UPDATE media SET attached_message_id=? WHERE id=?',(msg_id,attachment_id))
                 con.execute('UPDATE threads SET last_activity=? WHERE id=?',(now,t['id']));record_activity(con,user,now); emit_event(con,other['id'],'private.message',{'messageId':msg_id,'threadId':t['id'],'senderId':user['id'],'sender':user['username'],'message':message,'attachmentId':attachment_id or None,'createdAt':now}); emit_event(con,user['id'],'private.sent',{'messageId':msg_id,'threadId':t['id'],'recipientId':other['id'],'recipient':other['username'],'createdAt':now}); con.commit();con.close();send_json(self,{'ok':True,'threadId':t['id'],'messageId':msg_id,'attachmentId':attachment_id or None});return
+            if path=='/api/typing':
+                # Mockup rebuild: heartbeat that this user is typing in a thread.
+                # Cheap upsert; rows are read with a TTL and swept in cleanup().
+                tid=int(data.get('threadId') or 0)
+                if not tid:con.close();send_json(self,{'error':'Invalid conversation.'},400);return
+                t=con.execute('SELECT * FROM threads WHERE id=? AND (user_a=? OR user_b=?)',(tid,user['id'],user['id'])).fetchone()
+                if not t:con.close();send_json(self,{'error':'Invalid conversation.'},403);return
+                now=int(time.time())
+                con.execute('INSERT INTO typing_state(thread_id,user_id,updated_at) VALUES(?,?,?) '
+                            'ON CONFLICT(thread_id,user_id) DO UPDATE SET updated_at=excluded.updated_at',
+                            (tid,user['id'],now))
+                con.commit();con.close();send_json(self,{'ok':True});return
             if path=='/api/read':
                 tid=int(data.get('threadId') or 0)
                 if not tid:con.close();send_json(self,{'error':'Invalid conversation.'},400);return
-                last=con.execute('SELECT COALESCE(MAX(id),0) n FROM private_messages WHERE thread_id=? AND recipient_id=?',(tid,user['id'])).fetchone()['n'];con.execute('INSERT INTO private_reads(user_id,thread_id,last_read) VALUES(?,?,?) ON CONFLICT(user_id,thread_id) DO UPDATE SET last_read=excluded.last_read',(user['id'],tid,last));con.commit();con.close();send_json(self,{'ok':True});return
+                last=con.execute('SELECT COALESCE(MAX(id),0) n FROM private_messages WHERE thread_id=? AND recipient_id=?',(tid,user['id'])).fetchone()['n'];con.execute('INSERT INTO private_reads(user_id,thread_id,last_read) VALUES(?,?,?) ON CONFLICT(user_id,thread_id) DO UPDATE SET last_read=excluded.last_read',(user['id'],tid,last))
+                # Mockup rebuild: opening a thread marks the other side's messages seen,
+                # and notifies the sender over the existing event stream.
+                now=int(time.time())
+                con.execute('UPDATE private_messages SET seen_at=? WHERE thread_id=? AND recipient_id=? AND seen_at=0',(now,tid,user['id']))
+                sender=con.execute('SELECT sender_id FROM private_messages WHERE thread_id=? AND recipient_id=? ORDER BY id DESC LIMIT 1',(tid,user['id'])).fetchone()
+                if sender: emit_event(con,sender['sender_id'],'private.seen',{'threadId':tid,'by':user['username'],'at':now})
+                con.commit();con.close();send_json(self,{'ok':True});return
             if path in ('/api/block','/api/unblock'):
                 other_name=str(data.get('other','')).strip();other=con.execute('SELECT id FROM users WHERE username=?',(other_name,)).fetchone()
                 if not other or other['id']==user['id']:con.close();send_json(self,{'error':'Invalid member.'},400);return
