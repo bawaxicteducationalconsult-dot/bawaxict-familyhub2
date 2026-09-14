@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B2E23">
+<title>Services | BAWAXICT FamilyHub</title>
+<!--
+  REBUILT from scratch in the mockup design system.
+  The previous services.html was a 2.2 KB static marketing page for the
+  physical Ilorin storefront with zero JS and no API calls. This version
+  is the mockup's "find trusted local service providers" directory, wired
+  to the live /api/services, /api/services/mine and /api/services/request.
+-->
+<link rel="stylesheet" href="css/familyhub-mockup.css">
+<script src="config.js"></script>
+<style>
+.layout{display:flex;min-height:100dvh}
+.content{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{height:var(--fh-header);background:var(--fh-card);border-bottom:1px solid var(--fh-border);
+  display:flex;align-items:center;gap:14px;padding:0 20px;position:sticky;top:0;z-index:20}
+.search{flex:1;max-width:440px;position:relative}
+.search input{width:100%;height:40px;border-radius:var(--fh-pill);border:1px solid var(--fh-border);
+  background:var(--fh-bg);padding:0 16px 0 38px;font-family:inherit;font-size:13.5px;outline:0}
+.search input:focus{border-color:var(--fh-green-500);background:var(--fh-card)}
+.search .mag{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--fh-faint)}
+.wrap{max-width:1120px;width:100%;margin:0 auto;padding:22px 18px 40px}
+.hero{background:linear-gradient(135deg,var(--fh-green-900),var(--fh-green-700));
+  border-radius:var(--fh-radius-lg);padding:26px 28px;color:#fff;margin-bottom:20px;
+  display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.hero h1{margin:0 0 6px;font-size:24px;font-weight:800;letter-spacing:-.3px}
+.hero p{margin:0;opacity:.85;font-size:14px;max-width:520px}
+.filters{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.svc{padding:18px;display:flex;flex-direction:column;gap:10px;transition:.16s}
+.svc:hover{transform:translateY(-2px);box-shadow:var(--fh-shadow)}
+.svc-top{display:flex;gap:12px;align-items:flex-start}
+.svc-name{font-weight:800;font-size:15px;color:var(--fh-ink);line-height:1.3}
+.svc-cat{font-size:12px;color:var(--fh-green-600);font-weight:700;margin-top:2px}
+.svc-desc{font-size:13px;color:var(--fh-muted);line-height:1.55;flex:1}
+.svc-foot{display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--fh-border)}
+.price{font-weight:800;font-size:14px;color:var(--fh-green-900)}
+.reqs{margin-top:26px}
+.reqs h2{font-size:17px;font-weight:800;margin:0 0 12px;color:var(--fh-green-900)}
+.req{display:flex;align-items:center;gap:12px;padding:13px 16px;margin-bottom:9px}
+.st{padding:3px 10px;border-radius:var(--fh-pill);font-size:11px;font-weight:800}
+.st.pending{background:var(--fh-orange-100);color:var(--fh-orange-600)}
+.st.done{background:var(--fh-green-100);color:#166534}
+@media(max-width:900px){.wrap{padding:16px 14px 90px}.hero{padding:20px}}
+</style>
+</head>
+<body class="has-tabbar">
+
+<div class="layout">
+  <aside class="fh-rail">
+    <a href="forum.html" class="fh-brand" style="padding:6px 10px 16px">
+      <span class="fh-brand-mark">B</span>
+      <span class="fh-brand-text"><b>BAWAXICT</b><span>FamilyHub</span></span>
+    </a>
+    <a class="fh-nav-item" href="forum.html"><span class="ic">⌂</span>Home</a>
+    <a class="fh-nav-item" href="discover.html"><span class="ic">⌕</span>Discover</a>
+    <a class="fh-nav-item" href="private-chat.html"><span class="ic">✉</span>Chat</a>
+    <a class="fh-nav-item" href="marketplace.html"><span class="ic">▤</span>Marketplace</a>
+    <a class="fh-nav-item active" href="services.html"><span class="ic">⚒</span>Services</a>
+    <a class="fh-nav-item" href="institute.html"><span class="ic">▰</span>Learning</a>
+    <a class="fh-nav-item" href="skills.html"><span class="ic">▣</span>Opportunities</a>
+    <a class="fh-nav-item" href="games.html"><span class="ic">⌁</span>Entertainment</a>
+    <a class="fh-nav-item" href="tickets.html"><span class="ic">◇</span>Internet Tickets</a>
+    <a class="fh-nav-item" href="report.html"><span class="ic">◉</span>Support</a>
+    <div class="fh-spacer" style="flex:1"></div>
+    <div class="fh-wifi"><span class="fh-dot" id="wifiDot"></span><span id="wifiTxt">Checking…</span></div>
+  </aside>
+
+  <div class="content">
+    <header class="topbar">
+      <div class="search">
+        <span class="mag">⌕</span>
+        <input id="q" placeholder="Search services, skills or providers…" autocomplete="off">
+      </div>
+      <div class="fh-spacer"></div>
+      <button class="fh-btn fh-btn-accent fh-btn-sm" id="offerBtn">+ Request a service</button>
+    </header>
+
+    <div class="wrap">
+      <div class="hero">
+        <div style="flex:1;min-width:240px">
+          <h1>Find trusted local services</h1>
+          <p>Verified providers from your community — repairs, tutoring, printing and more.</p>
+        </div>
+        <span class="fh-badge" style="background:rgba(255,255,255,.16);color:#fff">✅ Community verified</span>
+      </div>
+
+      <div class="filters" id="filters"></div>
+      <div class="grid" id="grid">
+        <div class="fh-empty"><div class="ico">⚒</div><b>Loading services…</b></div>
+      </div>
+
+      <section class="reqs" id="reqsSection" style="display:none">
+        <h2>My requests</h2>
+        <div id="reqs"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<nav class="fh-tabbar">
+  <a href="forum.html"><span class="ic">⌂</span>Home</a>
+  <a href="discover.html"><span class="ic">⌕</span>Discover</a>
+  <a href="marketplace.html"><span class="fab">+</span></a>
+  <a href="private-chat.html"><span class="ic">✉</span>Chat</a>
+  <a href="services.html" class="active"><span class="ic">⚒</span>Services</a>
+</nav>
+
+<div class="fh-modal" id="reqModal">
+  <div class="fh-modal-box">
+    <div class="fh-modal-head"><h3 id="reqTitle">Request a service</h3><button class="fh-x" data-close>×</button></div>
+    <div class="fh-modal-body">
+      <div class="fh-field">
+        <label class="fh-label" for="reqSvc">Service</label>
+        <select class="fh-input" id="reqSvc"></select>
+      </div>
+      <div class="fh-field">
+        <label class="fh-label" for="reqMsg">What do you need?</label>
+        <textarea class="fh-input" id="reqMsg" placeholder="Describe what you need, and when…"></textarea>
+      </div>
+      <div class="fh-err" id="reqErr"></div>
+      <button class="fh-btn fh-btn-block" id="reqSend">Send request</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+var CFG=window.BAWAXICT_CONFIG||{};
+var API=(CFG.familyHubApiBase||'/api/familyhub/').replace(/\/$/,'');
+function api(p,o){
+  o=o||{};
+  return fetch(API+p,{method:o.method||'GET',credentials:'include',
+    headers:o.body?{'Content-Type':'application/json'}:undefined,body:o.body})
+    .then(function(r){return r.json().catch(function(){return{}}).then(function(d){
+      if(!r.ok)throw new Error(d.error||'Request failed.');return d;})});
+}
+function esc(s){return String(s==null?'':s).replace(/[&<>'"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}
+function initial(n){return ((n||'?').trim().charAt(0)||'?').toUpperCase()}
+function toast(t){var e=document.createElement('div');e.className='fh-toast';e.textContent=t;
+  document.body.appendChild(e);setTimeout(function(){e.remove()},3200)}
+var $=function(i){return document.getElementById(i)};
+
+var all=[],cat='',authed=false;
+
+api('/session').then(function(s){
+  authed=!!s.authenticated;
+  $('wifiDot').className='fh-dot'+(authed?'':' off');
+  $('wifiTxt').textContent=authed?('Connected · '+s.username):'Not signed in';
+  if(authed)loadReqs();
+}).catch(function(){
+  $('wifiDot').className='fh-dot off';$('wifiTxt').textContent='Offline';
+});
+
+api('/services').then(function(d){
+  all=d.services||[];
+  var cats={};all.forEach(function(s){if(s.category)cats[s.category]=1});
+  $('filters').innerHTML='<button class="fh-tab active" data-c="">All services</button>'
+    +Object.keys(cats).map(function(c){
+      return '<button class="fh-tab" data-c="'+esc(c)+'">'+esc(c)+'</button>'}).join('');
+  Array.prototype.forEach.call($('filters').children,function(b){
+    b.onclick=function(){
+      Array.prototype.forEach.call($('filters').children,function(x){x.classList.remove('active')});
+      b.classList.add('active');cat=b.getAttribute('data-c');render();
+    };
+  });
+  render();
+}).catch(function(e){
+  $('grid').innerHTML='<div class="fh-empty"><div class="ico">⚠</div><b>Could not load services</b>'+esc(e.message)+'</div>';
+});
+
+function render(){
+  var q=($('q').value||'').toLowerCase().trim();
+  var list=all.filter(function(s){
+    if(cat&&s.category!==cat)return false;
+    if(!q)return true;
+    return (s.name+' '+(s.category||'')+' '+(s.description||'')).toLowerCase().indexOf(q)>=0;
+  });
+  if(!list.length){
+    $('grid').innerHTML='<div class="fh-empty"><div class="ico">⚒</div><b>No services found</b>'
+      +'Try another category or search term.</div>';
+    return;
+  }
+  $('grid').innerHTML=list.map(function(s){
+    return '<article class="fh-card svc">'
+      +'<div class="svc-top"><span class="fh-av">'+esc(initial(s.name))+'</span>'
+      +'<div><div class="svc-name">'+esc(s.name)+'</div>'
+      +'<div class="svc-cat">'+esc(s.category||'General')+'</div></div></div>'
+      +'<p class="svc-desc">'+esc(s.description||'No description provided.')+'</p>'
+      +'<div class="svc-foot"><span class="price">'+esc(s.price_note||'Ask for a quote')+'</span>'
+      +'<div class="fh-spacer"></div>'
+      +'<button class="fh-btn fh-btn-sm" data-id="'+s.id+'" data-n="'+esc(s.name)+'">Request</button>'
+      +'</div></article>';
+  }).join('');
+  Array.prototype.forEach.call($('grid').querySelectorAll('button[data-id]'),function(b){
+    b.onclick=function(){openReq(b.getAttribute('data-id'),b.getAttribute('data-n'))};
+  });
+}
+$('q').addEventListener('input',render);
+
+function openReq(id,name){
+  if(!authed)return toast('Sign in from the community page to request a service.');
+  $('reqSvc').innerHTML=all.map(function(s){
+    return '<option value="'+s.id+'"'+(String(s.id)===String(id)?' selected':'')+'>'+esc(s.name)+'</option>';
+  }).join('');
+  $('reqTitle').textContent=name?('Request: '+name):'Request a service';
+  $('reqMsg').value='';$('reqErr').textContent='';
+  $('reqModal').classList.add('open');
+}
+$('offerBtn').onclick=function(){openReq('','')};
+Array.prototype.forEach.call(document.querySelectorAll('[data-close]'),function(b){
+  b.onclick=function(){$('reqModal').classList.remove('open')}});
+$('reqModal').onclick=function(e){if(e.target===this)this.classList.remove('open')};
+
+$('reqSend').onclick=function(){
+  var msg=$('reqMsg').value.trim();
+  if(!msg){$('reqErr').textContent='Please describe what you need.';return}
+  $('reqSend').disabled=true;
+  api('/services/request',{method:'POST',body:JSON.stringify({
+    serviceId:Number($('reqSvc').value),message:msg})})
+    .then(function(){
+      $('reqModal').classList.remove('open');
+      toast('Request sent.');loadReqs();
+    }).catch(function(e){$('reqErr').textContent=e.message})
+    .finally(function(){$('reqSend').disabled=false});
+};
+
+function loadReqs(){
+  api('/services/mine').then(function(d){
+    var r=d.requests||[];
+    if(!r.length){$('reqsSection').style.display='none';return}
+    $('reqsSection').style.display='';
+    $('reqs').innerHTML=r.map(function(x){
+      var done=(x.status||'').toLowerCase()==='fulfilled'||(x.status||'').toLowerCase()==='done';
+      return '<div class="fh-card req"><span class="fh-av fh-av-sm">'+esc(initial(x.service_name))+'</span>'
+        +'<div style="flex:1;min-width:0"><b style="font-size:14px">'+esc(x.service_name)+'</b>'
+        +'<div class="fh-muted" style="font-size:12.5px">'+esc(x.message||'')+'</div></div>'
+        +'<span class="st '+(done?'done':'pending')+'">'+esc(x.status||'pending')+'</span></div>';
+    }).join('');
+  }).catch(function(){});
+}
+})();
+</script>
+</body>
+</html>

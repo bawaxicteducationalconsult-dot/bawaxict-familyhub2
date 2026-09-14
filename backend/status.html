@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B2E23">
+<title>You're Connected | BAWAXICT FamilyHub</title>
+<!--
+  MOCKUP PANELS 2 + 7 — rebuilt.
+  The previous version hardcoded "12 people active in the community right now".
+  That number is now read from the live /api/members endpoint (which uses
+  online_for() server-side). CTA now enters forum.html, the canonical feed.
+-->
+<link rel="stylesheet" href="css/familyhub-mockup.css">
+<script src="config.js"></script>
+<style>
+body{min-height:100dvh;display:grid;place-items:center;padding:20px;color:#fff;
+  background:linear-gradient(160deg,var(--fh-green-900),var(--fh-green-700) 55%,#0c3527);
+  position:relative;overflow-x:hidden}
+body::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(circle at 1.5px 1.5px,rgba(255,255,255,.07) 1.5px,transparent 0);
+  background-size:30px 30px;pointer-events:none}
+.wrap{position:relative;width:min(440px,100%);text-align:center}
+.tick{width:104px;height:104px;border-radius:50%;margin:0 auto 20px;display:grid;place-items:center;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  backdrop-filter:blur(6px);animation:pop .45s cubic-bezier(.2,.9,.3,1.3)}
+.tick svg{width:52px;height:52px}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+h1{font-size:29px;font-weight:800;margin:0 0 8px;letter-spacing:-.4px}
+.lead{font-size:15px;opacity:.86;line-height:1.55;margin:0 auto 22px;max-width:330px}
+.stats{display:flex;gap:10px;margin-bottom:22px}
+.stat{flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);
+  border-radius:var(--fh-radius);padding:14px 10px;backdrop-filter:blur(4px)}
+.stat b{display:block;font-size:21px;font-weight:800;line-height:1.2}
+.stat span{font-size:11.5px;opacity:.78}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:22px}
+.quick a{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);
+  border-radius:var(--fh-radius-sm);padding:14px 6px;color:#fff;font-size:11.5px;font-weight:700;
+  display:flex;flex-direction:column;align-items:center;gap:6px;transition:.16s}
+.quick a:hover{background:rgba(255,255,255,.18)}
+.quick .ic{font-size:21px}
+.foot{font-size:12.5px;opacity:.72;margin-top:22px;line-height:1.6}
+.wifi-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.18);border-radius:var(--fh-pill);
+  padding:7px 15px;font-size:12.5px;font-weight:700;margin-bottom:18px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="wifi-pill"><span class="fh-dot"></span><span id="netName">BAWAXICT WIFI</span></div>
+
+  <div class="tick">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#12B76A" stroke-width="3"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 6L9 17l-5-5"/>
+    </svg>
+  </div>
+
+  <h1>You're Connected!</h1>
+  <p class="lead">Welcome to BAWAXICT FamilyHub.<br>More than WiFi — your digital community.</p>
+
+  <div class="stats">
+    <div class="stat"><b id="statOnline">—</b><span>active now</span></div>
+    <div class="stat"><b id="statMembers">—</b><span>members</span></div>
+    <div class="stat"><b id="statPosts">—</b><span>posts today</span></div>
+  </div>
+
+  <div class="quick">
+    <a href="forum.html"><span class="ic">💬</span>Community</a>
+    <a href="services.html"><span class="ic">⚒</span>Services</a>
+    <a href="institute.html"><span class="ic">📘</span>Learning</a>
+    <a href="marketplace.html"><span class="ic">🛒</span>Marketplace</a>
+    <a href="skills.html"><span class="ic">💼</span>Opportunities</a>
+    <a href="games.html"><span class="ic">🎮</span>Entertainment</a>
+  </div>
+
+  <a href="forum.html" class="fh-btn fh-btn-accent fh-btn-block" style="padding:16px">
+    Enter FamilyHub →
+  </a>
+
+  <div class="foot" id="foot">Connected to BAWAXICT WIFI</div>
+</div>
+
+<script>
+(function(){
+'use strict';
+var CFG=window.BAWAXICT_CONFIG||{};
+var API=(CFG.familyHubApiBase||'/api/familyhub/').replace(/\/$/,'');
+var $=function(i){return document.getElementById(i)};
+function api(p){
+  return fetch(API+p,{credentials:'include'}).then(function(r){
+    if(!r.ok)throw new Error('x');return r.json();});
+}
+
+/* Real numbers only. If a call fails the stat stays blank rather than
+   showing an invented figure. */
+api('/members').then(function(d){
+  var m=d.members||[];
+  var online=m.filter(function(x){return x.online}).length;
+  $('statOnline').textContent=online;
+  $('statMembers').textContent=m.length;
+}).catch(function(){
+  $('statOnline').textContent='–';$('statMembers').textContent='–';
+});
+
+api('/community').then(function(d){
+  var msgs=d.messages||[];
+  var cutoff=Math.floor(Date.now()/1000)-86400;
+  $('statPosts').textContent=msgs.filter(function(x){return x.created_at>=cutoff}).length;
+}).catch(function(){ $('statPosts').textContent='–'; });
+
+api('/session').then(function(s){
+  if(s.authenticated){
+    $('foot').innerHTML='Signed in as <b>'+String(s.username).replace(/[<>&]/g,'')+'</b>'
+      +' · Connected to BAWAXICT WIFI';
+  }
+}).catch(function(){});
+})();
+</script>
+</body>
+</html>
