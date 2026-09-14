@@ -46,10 +46,13 @@ img{display:block;max-width:100%}
 
 .shell{display:grid;grid-template-columns:248px 1fr 300px;max-width:1360px;margin:0 auto;min-height:100vh}
 @media (max-width:1100px){.shell{grid-template-columns:220px 1fr}.rail-right{display:none}}
-@media (max-width:860px){.shell{grid-template-columns:1fr}.rail-left{display:none}}
 
 /* left rail */
 .rail-left{padding:22px 16px;display:flex;flex-direction:column;gap:22px;position:sticky;top:0;height:100vh}
+/* Mobile hide MUST come after .rail-left's display:flex above: at equal
+   specificity the later rule wins, so the original ordering left the nav
+   rail rendering full-screen on phones and hiding the feed entirely. */
+@media (max-width:860px){.shell{grid-template-columns:1fr}.rail-left{display:none}}
 .brand{display:flex;align-items:center;gap:10px;padding:0 8px}
 .brand-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(160deg,var(--green-600),var(--green-900));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;flex-shrink:0;overflow:hidden}
 .brand-mark img{width:100%;height:100%;object-fit:cover}
@@ -85,7 +88,11 @@ img{display:block;max-width:100%}
 .feed-scroll{padding:20px 24px 60px;display:flex;flex-direction:column;gap:18px}
 
 .hero{position:relative;overflow:hidden;border-radius:var(--radius-lg);padding:26px;color:#fff;background:linear-gradient(120deg,var(--green-900) 0%,var(--green-700) 55%,var(--green-600) 100%);display:flex;align-items:center;justify-content:space-between;gap:20px}
-.hero::after{content:"";position:absolute;right:-40px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.10),transparent 70%)}
+/* pointer-events:none is REQUIRED: this 220px decorative circle sits at the
+   hero's top-right, directly over the Create button, and without it the
+   pseudo-element swallows every click on that button. */
+.hero::after{content:"";position:absolute;right:-40px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.10),transparent 70%);pointer-events:none}
+.hero-text,.hero-cta{position:relative;z-index:1}
 .hero-text h1{margin:0 0 6px;font-size:21px;font-weight:800}
 .hero-text p{margin:0;font-size:13.5px;color:rgba(255,255,255,.82)}
 .online-pill{display:inline-flex;align-items:center;gap:7px;margin-top:12px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:6px 13px;font-size:12px;font-weight:700}
@@ -133,6 +140,9 @@ img{display:block;max-width:100%}
 .notice-card .post-body{font-size:13.5px}
 .activity-card{display:block}
 .activity-card:hover{border-color:var(--green-600)}
+.activity-toggle{width:100%;margin-top:8px;padding:10px;border:1px solid var(--border);background:var(--card);color:var(--green-700);border-radius:12px;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;transition:.15s}
+.activity-toggle:hover{background:var(--bg);border-color:var(--green-600)}
+#activityMore{display:none}
 .empty-feed{text-align:center;color:var(--ink-500);font-size:13px;padding:26px 16px;line-height:1.6}
 .empty-feed b{color:var(--green-900)}
 
@@ -294,14 +304,15 @@ img{display:block;max-width:100%}
     </div>
 
     <nav class="nav">
-      <a class="nav-item" href="index.html"><span class="ic">⌂</span>Home</a>
-      <a class="nav-item active" href="forum.html" aria-current="page"><span class="ic">♟</span>Forum</a>
+      <a class="nav-item active" href="forum.html" aria-current="page"><span class="ic">⌂</span>Home</a>
+      <a class="nav-item" href="discover.html"><span class="ic">⌕</span>Discover</a>
       <a class="nav-item" href="private-chat.html"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>Chat</a>
-      <a class="nav-item" href="/marketplace.html"><span class="ic">♧</span>Marketplace</a>
+      <a class="nav-item" href="marketplace.html"><span class="ic">♧</span>Marketplace</a>
       <a class="nav-item" href="services.html"><span class="ic">⚒</span>Services</a>
       <a class="nav-item" href="institute.html"><span class="ic">▰</span>Learning</a>
       <a class="nav-item" href="skills.html"><span class="ic">▣</span>Opportunities</a>
       <a class="nav-item" href="games.html"><span class="ic">⌁</span>Entertainment</a>
+      <a class="nav-item" href="tickets.html"><span class="ic">◇</span>Internet Tickets</a>
       <a class="nav-item" href="report.html"><span class="ic">◉</span>Support</a>
     </nav>
 
@@ -431,7 +442,7 @@ img{display:block;max-width:100%}
     <div class="rr-card">
       <div class="rr-title">Invite &amp; Earn</div>
       <p style="font-size:12.5px;color:var(--ink-500);margin:0 0 10px;">Invite friends and earn rewards.</p>
-      <a class="hotspot-cta orange" href="community-chat.html">Invite Now →</a>
+      <a class="hotspot-cta orange" href="invite.html">Invite Now →</a>
     </div>
   </aside>
 </div>
@@ -441,7 +452,7 @@ img{display:block;max-width:100%}
   <a class="bn-item" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Home</a>
   <a class="bn-item" href="private-chat.html" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Chat<span class="count-badge" id="chatBadgeBottom" style="display:none">0</span></a>
   <button class="bn-fab" id="fabBtn" type="button" aria-label="Create post"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></button>
-  <a class="bn-item" href="/marketplace.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v10H3z"/></svg>Market</a>
+  <a class="bn-item" href="marketplace.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v10H3z"/></svg>Market</a>
   <button class="bn-item" id="meTabBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Me</button>
 </nav>
 
@@ -451,6 +462,14 @@ img{display:block;max-width:100%}
     <h2>Join BAWAXICT Community</h2>
     <p>Choose a unique community username. It is remembered on this device for <b>21 days</b> and can only be changed after then.</p>
     <input id="gateName" maxlength="24" placeholder="e.g. Tunde123" autocomplete="off">
+    <div id="gateRecoveryWrap" style="display:none;margin-top:10px">
+      <input id="gateRecovery" maxlength="9" placeholder="Recovery code (e.g. A1B2-C3D4)"
+             autocomplete="off" style="text-align:center;letter-spacing:1px;text-transform:uppercase">
+      <div style="font-size:12px;color:var(--ink-500);margin-top:6px;line-height:1.45">
+        This name is already registered. Enter its recovery code to use it on this
+        device, or <a href="#" id="gateUseAnother" style="color:var(--green-700);font-weight:700">choose a different name</a>.
+      </div>
+    </div>
     <button class="gate-btn" id="gateJoinBtn" type="button">Join Community</button>
     <div class="gate-error" id="gateError"></div>
   </div>
@@ -647,6 +666,9 @@ function comingSoon(feature){ toast(feature + ' is coming soon 🚧'); }
 var joined = false, CHAT_USER = '', MY_ID = 0, IDENTITY_EXPIRES = 0;
 var onlineMembers = [], onlineCount = 0;
 var lastActivitySig = '', lastNoticeSig = '';
+/* Live activity collapses to 3 rows; this survives the 8s feed refresh so an
+   expanded list does not snap shut under the user. */
+var activityExpanded = false;
 var tabSig = { foryou: '', following: '', trending: '' };
 var seenPostCount = 0, lastUnreadCount = 0, unreadInited = false;
 var currentTab = 'foryou';
@@ -753,16 +775,65 @@ function doJoin(username, recoveryCode){
     return completeJoin(r);
   }).catch(function(e){
     if(e.data && e.data.recoveryRequired){
-      var code = prompt('That username is already registered on FamilyHub. Enter its recovery code to continue on this device, or press Cancel to choose a different name:');
-      if(code){ gateJoinBtn.disabled = false; return doJoin(username, code.trim()); }
+      /* The name is taken. Reveal an inline recovery-code field instead of a
+         blocking prompt(): the gate previously had no way to enter the code
+         and no way to dismiss itself, so a user who typed an existing name
+         was stuck behind the overlay and could never reach the composer. */
+      if(recoveryCode){
+        /* They already tried a code and it was rejected. Keep the field open
+           and say so plainly, rather than silently re-showing an empty box. */
+        gateError.textContent = 'That recovery code is not correct for "' + username + '". Check it and try again, or choose a different name.';
+        gateRecovery.value = '';
+        setTimeout(function(){ gateRecovery.focus(); }, 60);
+        return;
+      }
+      showRecoveryField(username);
+      return;
     }
     gateError.textContent = e.message || 'Unable to join the community.';
   }).finally(function(){ gateJoinBtn.disabled = false; });
 }
 
+var gateRecoveryWrap = document.getElementById('gateRecoveryWrap'),
+    gateRecovery = document.getElementById('gateRecovery');
+
+function showRecoveryField(username){
+  gateRecoveryWrap.style.display = 'block';
+  gateError.textContent = '';
+  gateJoinBtn.textContent = 'Continue as ' + username;
+  setTimeout(function(){ gateRecovery.focus(); }, 60);
+}
+function resetGateToNameEntry(){
+  gateRecoveryWrap.style.display = 'none';
+  gateRecovery.value = '';
+  gateError.textContent = '';
+  gateJoinBtn.textContent = 'Join Community';
+  gateName.value = '';
+  setTimeout(function(){ gateName.focus(); }, 60);
+}
+document.getElementById('gateUseAnother').addEventListener('click', function(e){
+  e.preventDefault(); resetGateToNameEntry();
+});
+gateName.addEventListener('input', function(){
+  /* Typing a different name abandons the recovery attempt. */
+  if(gateRecoveryWrap.style.display === 'block'){
+    gateRecoveryWrap.style.display = 'none';
+    gateRecovery.value = '';
+    gateJoinBtn.textContent = 'Join Community';
+  }
+});
+
 gateJoinBtn.addEventListener('click', function(){
   var n = gateName.value.trim();
   if(!/^[A-Za-z0-9 _.-]{3,24}$/.test(n)){ gateError.textContent = 'Use 3–24 letters, numbers, spaces, dot, dash or underscore.'; return; }
+  /* If the recovery field is open, this click is the second step: claim an
+     existing name on this device using its code. */
+  if(gateRecoveryWrap.style.display === 'block'){
+    var code = gateRecovery.value.trim();
+    if(!code){ gateError.textContent = 'Enter the recovery code for "' + n + '", or choose a different name.'; return; }
+    doJoin(n, code);
+    return;
+  }
   apiFetch('/device?client_id=' + encodeURIComponent(CLIENT_ID)).then(function(bind){
     if(bind && bind.bound && bind.username && bind.username.toLowerCase() !== n.toLowerCase()){
       var wantsNew = confirm('This device is already registered as "' + bind.username + '".\n\nPress OK to create a brand-new separate account as "' + n + '" instead.\nPress Cancel to continue using your existing account "' + bind.username + '".');
@@ -772,6 +843,7 @@ gateJoinBtn.addEventListener('click', function(){
   }).catch(function(){ doJoin(n); });
 });
 gateName.addEventListener('keydown', function(e){ if(e.key === 'Enter') gateJoinBtn.click(); });
+gateRecovery.addEventListener('keydown', function(e){ if(e.key === 'Enter') gateJoinBtn.click(); });
 
 function completeJoin(){
   joined = true;
@@ -1050,7 +1122,13 @@ function renderActivities(activities){
     box.innerHTML = '<div class="card post"><div class="empty-feed"><b>No activity yet.</b><br>Be the first to participate.</div></div>';
     return;
   }
-  activities.slice(0, 10).forEach(function(a){
+  /* Live activity collapses after the first 3 entries: the rail is a glance
+     surface, and an unbounded list pushed the rest of the page out of view.
+     The remainder stays in the DOM behind a toggle so nothing is lost. */
+  var LIVE_VISIBLE = 3;
+  var shown = activities.slice(0, 10);
+
+  function buildCard(a){
     var card = document.createElement('a');
     card.className = 'card post activity-card';
     card.href = safeActivityLink(a.link);
@@ -1063,8 +1141,35 @@ function renderActivities(activities){
     who.appendChild(b); who.appendChild(meta); em.appendChild(av); em.appendChild(who);
     var p = document.createElement('p'); p.className = 'post-body'; p.textContent = a.actionText || '';
     card.appendChild(em); card.appendChild(p);
-    box.appendChild(card);
+    return card;
+  }
+
+  shown.slice(0, LIVE_VISIBLE).forEach(function(a){ box.appendChild(buildCard(a)); });
+
+  var rest = shown.slice(LIVE_VISIBLE);
+  if(!rest.length) return;
+
+  var more = document.createElement('div');
+  more.id = 'activityMore';
+  more.style.display = activityExpanded ? 'block' : 'none';
+  rest.forEach(function(a){ more.appendChild(buildCard(a)); });
+  box.appendChild(more);
+
+  var toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'activity-toggle';
+  function paintToggle(){
+    toggle.textContent = activityExpanded
+      ? 'Show less \u25b4'
+      : 'Show ' + rest.length + ' more ' + (rest.length === 1 ? 'update' : 'updates') + ' \u25be';
+  }
+  paintToggle();
+  toggle.addEventListener('click', function(){
+    activityExpanded = !activityExpanded;
+    more.style.display = activityExpanded ? 'block' : 'none';
+    paintToggle();
   });
+  box.appendChild(toggle);
 }
 
 function refreshFeed(){

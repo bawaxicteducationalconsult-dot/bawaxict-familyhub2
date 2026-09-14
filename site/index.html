@@ -73,7 +73,9 @@ img{display:block;max-width:100%}
 .feed-scroll{padding:20px 24px 60px;display:flex;flex-direction:column;gap:18px}
 
 .hero{position:relative;overflow:hidden;border-radius:var(--radius-lg);padding:26px;color:#fff;background:linear-gradient(120deg,var(--green-900) 0%,var(--green-700) 55%,var(--green-600) 100%);display:flex;align-items:center;justify-content:space-between;gap:20px}
-.hero::after{content:"";position:absolute;right:-40px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.10),transparent 70%)}
+/* pointer-events:none: this decorative circle overlaps the hero's CTA and
+   would otherwise intercept clicks on it. */
+.hero::after{content:"";position:absolute;right:-40px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.10),transparent 70%);pointer-events:none}
 .hero-text h1{margin:0 0 6px;font-size:21px;font-weight:800}
 .hero-text p{margin:0;font-size:13.5px;color:rgba(255,255,255,.82)}
 .hero-cta{background:var(--orange-600);color:#fff;padding:11px 20px;border-radius:999px;font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:7px;flex-shrink:0;white-space:nowrap;box-shadow:0 6px 16px rgba(232,114,15,.35)}
@@ -164,11 +166,12 @@ img{display:block;max-width:100%}
     <nav class="nav">
       <a class="nav-item active" href="index.html"><span class="ic">⌂</span>Home</a>
       <a class="nav-item" href="community-chat.html"><span class="ic">♟</span>Forum &amp; Chat</a>
-      <a class="nav-item" href="/marketplace.html"><span class="ic">♧</span>Marketplace</a>
+      <a class="nav-item" href="marketplace.html"><span class="ic">♧</span>Marketplace</a>
       <a class="nav-item" href="services.html"><span class="ic">⚒</span>Services</a>
       <a class="nav-item" href="institute.html"><span class="ic">▰</span>Learning</a>
       <a class="nav-item" href="skills.html"><span class="ic">▣</span>Opportunities</a>
       <a class="nav-item" href="games.html"><span class="ic">⌁</span>Entertainment</a>
+      <a class="nav-item" href="tickets.html"><span class="ic">◇</span>Internet Tickets</a>
       <a class="nav-item" href="report.html"><span class="ic">◉</span>Support</a>
     </nav>
 
@@ -253,7 +256,7 @@ img{display:block;max-width:100%}
   <a class="bn-item active" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Home</a>
   <a class="bn-item" href="community-chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Chat</a>
   <a class="bn-fab" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></a>
-  <a class="bn-item" href="/marketplace.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v10H3z"/></svg>Market</a>
+  <a class="bn-item" href="marketplace.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v10H3z"/></svg>Market</a>
   <button class="bn-item" id="meTabBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Me</button>
 </nav>
 
