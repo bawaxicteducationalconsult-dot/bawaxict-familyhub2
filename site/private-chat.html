@@ -321,6 +321,7 @@ function startSession(username){
   me=username;
   loadConvs();
   startStream();
+  startEventPolling();
   var q=new URLSearchParams(location.search).get('with');
   if(q) open(q);
 }
@@ -515,24 +516,114 @@ function tick(){
   }).catch(function(){});
 }
 
-function startStream(){
-  // Uses the backend's existing SSE contract; falls back to /events polling.
-  try{
-    es=new EventSource(API+'/stream?since='+lastEventId,{withCredentials:true});
-    es.onmessage=function(ev){
-      var d={};try{d=JSON.parse(ev.data)}catch(e){return}
-      lastEventId=d.id||lastEventId;
-      handleEvent(d);
-    };
-    es.onerror=function(){ try{es.close()}catch(e){} es=null; setTimeout(startStream,4000); };
-  }catch(e){ setInterval(pollEvents,4000); }
+/* ------------------------------------------------------------------
+   Live updates.
+
+   server.py closes every SSE stream after SSE_MAX_SECONDS (55s) by
+   design, so the client MUST reconnect for the life of the page. The
+   previous implementation reconnected only from es.onerror, and a clean
+   server-side close does not reliably fire an error in every browser --
+   so after the first 55s the stream went silent for good and messages
+   only showed up on a manual refresh.
+
+   This version:
+     - reconnects on 'error' AND on a clean close, and proactively
+       recycles the stream just before the server's own cutoff
+     - uses a watchdog: if no frame or keepalive arrives within
+       STREAM_IDLE_MS, the socket is presumed dead and rebuilt
+     - always runs a low-frequency /events poll as a safety net, so a
+       blocked or buffered SSE path degrades instead of failing silently
+     - dedupes by lastEventId, so SSE and the poll can overlap safely
+   ------------------------------------------------------------------ */
+var STREAM_CYCLE_MS = 50000;   // recycle before the server's 55s cutoff
+var STREAM_IDLE_MS  = 30000;   // server sends keepalive every 15s
+var streamCycleTimer=null, streamIdleTimer=null, streamRetry=0, pollTimerEvents=null;
+
+function clearStreamTimers(){
+  if(streamCycleTimer){ clearTimeout(streamCycleTimer); streamCycleTimer=null; }
+  if(streamIdleTimer){ clearTimeout(streamIdleTimer); streamIdleTimer=null; }
 }
+function closeStream(){
+  clearStreamTimers();
+  if(es){ try{ es.onerror=null; es.onmessage=null; es.close(); }catch(e){} es=null; }
+}
+function armIdleWatchdog(){
+  if(streamIdleTimer) clearTimeout(streamIdleTimer);
+  streamIdleTimer=setTimeout(function(){ restartStream(600); }, STREAM_IDLE_MS);
+}
+function restartStream(delay){
+  closeStream();
+  setTimeout(startStream, delay || 0);
+}
+
+function startStream(){
+  if(document.hidden){
+    // Don't hold a stream open in a backgrounded tab; the poll covers it.
+    setTimeout(startStream, 5000);
+    return;
+  }
+  closeStream();
+  var url=API+'/stream?since='+lastEventId;
+  try{
+    // NOTE: withCredentials must be passed in the init object; same-origin
+    // requests send cookies regardless, which is how this is deployed.
+    es=new EventSource(url,{withCredentials:true});
+  }catch(e){
+    es=null;
+    setTimeout(startStream, 8000);   // poll below keeps things moving
+    return;
+  }
+
+  es.onopen=function(){
+    streamRetry=0;
+    armIdleWatchdog();
+    clearTimeout(streamCycleTimer);
+    // Pre-empt the server's own cutoff so there is no dead window.
+    streamCycleTimer=setTimeout(function(){ restartStream(0); }, STREAM_CYCLE_MS);
+  };
+  es.onmessage=function(ev){
+    armIdleWatchdog();
+    var d={}; try{ d=JSON.parse(ev.data); }catch(e){ return; }
+    if(d.id){ if(d.id<=lastEventId) return; lastEventId=d.id; }
+    handleEvent(d);
+  };
+  es.onerror=function(){
+    // Fires on network drop and (in most browsers) on a clean close.
+    // Back off gently so a genuinely unreachable server is not hammered.
+    streamRetry=Math.min(streamRetry+1,5);
+    restartStream(Math.min(1000*streamRetry,6000));
+  };
+}
+
 function pollEvents(){
-  api('/events?since='+lastEventId).then(function(d){
-    (d.events||[]).forEach(handleEvent);
-    lastEventId=d.latestId||lastEventId;
+  return api('/events?since='+lastEventId).then(function(d){
+    var evs=d.events||[];
+    evs.forEach(function(e){
+      if(e.id&&e.id<=lastEventId) return;
+      if(e.id) lastEventId=e.id;
+      handleEvent(e);
+    });
+    if(d.latestId&&d.latestId>lastEventId) lastEventId=d.latestId;
   }).catch(function(){});
 }
+
+/* Safety net. Cheap (one indexed query), and the only thing standing
+   between the user and a silent chat if SSE is blocked by a proxy. */
+function startEventPolling(){
+  if(pollTimerEvents) clearInterval(pollTimerEvents);
+  pollTimerEvents=setInterval(function(){
+    if(!document.hidden) pollEvents();
+  }, 6000);
+}
+
+/* Coming back to the tab is the moment staleness is most visible. */
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden){
+    pollEvents();
+    if(!es) restartStream(0);
+  }
+});
+window.addEventListener('online',function(){ pollEvents(); restartStream(0); });
 function handleEvent(d){
   if(!d||!d.kind)return;
   if(d.kind==='private.message'){
