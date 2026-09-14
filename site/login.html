@@ -2,183 +2,196 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B2E23">
 <title>Join BAWAXICT FamilyHub</title>
-<link rel="stylesheet" href="css/familyhub-social.css">
+<!--
+  MOCKUP PANEL 7 — rebuilt.
+  Fixes three contract breakages found in live testing:
+    1. called GET /check-username  -> 404 (endpoint did not exist; now backfilled)
+    2. POSTed {preferredName}      -> 400 (handler reads `username`)
+    3. omitted client_id           -> 400 (required for device identity)
+    4. checked data.success        -> backend returns {ok:true}
+  Also replaces the hotlinked picsum.photos hero, which is blocked
+  pre-authentication on a captive portal, with a local CSS treatment.
+-->
+<link rel="stylesheet" href="css/familyhub-mockup.css">
+<script src="config.js"></script>
 <style>
-  body {
-    margin: 0;
-    background: linear-gradient(135deg, #0b6b4f, #073b2c);
-    color: white;
-    min-height: 100dvh;
-    font-family: system-ui, sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-  .social-card {
-    background: white;
-    color: #17352b;
-    max-width: 380px;
-    width: 100%;
-    border-radius: 28px;
-    overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
-  }
-  .hero-image {
-    height: 220px;
-    background: url('https://picsum.photos/id/1015/800/600') center/cover;
-    position: relative;
-  }
-  .hero-image::after {
-    content: "👥💬😊";
-    position: absolute;
-    bottom: 20px;
-    left: 0;
-    right: 0;
-    text-align: center;
-    font-size: 42px;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.4);
-  }
-  .content {
-    padding: 30px 24px;
-    text-align: center;
-  }
-  h1 {
-    font-size: 28px;
-    margin: 0 0 8px;
-    color: #073b2c;
-  }
-  p {
-    color: #6d7e76;
-    font-size: 15px;
-    line-height: 1.5;
-  }
-  .input {
-    width: 100%;
-    padding: 16px;
-    font-size: 17px;
-    border: 2px solid #e2ebe6;
-    border-radius: 16px;
-    margin: 24px 0 8px;
-    text-align: center;
-    background: #f8f9f7;
-  }
-  .btn {
-    width: 100%;
-    padding: 18px;
-    background: #f28a19;
-    color: white;
-    border: none;
-    border-radius: 999px;
-    font-size: 17px;
-    font-weight: 800;
-    cursor: pointer;
-  }
-  .reserved {
-    font-size: 13px;
-    color: #6d7e76;
-    margin: 20px 0;
-  }
-  .error {
-    color: #b42318;
-    min-height: 24px;
-    font-size: 14px;
-  }
+body{min-height:100dvh;display:grid;place-items:center;padding:20px;
+  background:linear-gradient(150deg,var(--fh-green-900),var(--fh-green-700) 55%,#0d3a2b)}
+.card{width:min(400px,100%);background:var(--fh-card);border-radius:28px;
+  box-shadow:var(--fh-shadow-lg);overflow:hidden}
+.hero{height:180px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,var(--fh-green-900),var(--fh-green-600));
+  display:grid;place-items:center}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(circle at 1.5px 1.5px,rgba(255,255,255,.16) 1.5px,transparent 0);
+  background-size:26px 26px}
+.hero::after{content:"";position:absolute;left:-20%;right:-20%;bottom:-70%;height:170px;
+  background:radial-gradient(ellipse at center,rgba(18,183,106,.55),transparent 70%)}
+.hero-in{position:relative;text-align:center;color:#fff}
+.hero-in .mk{width:60px;height:60px;border-radius:18px;background:rgba(255,255,255,.16);
+  display:grid;place-items:center;font-size:28px;font-weight:800;margin:0 auto 10px;
+  backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.22)}
+.hero-in b{display:block;font-size:16px;letter-spacing:.4px}
+.hero-in span{font-size:12px;opacity:.8}
+.body{padding:26px 26px 28px;text-align:center}
+h1{font-size:23px;margin:0 0 7px;color:var(--fh-green-900);font-weight:800;letter-spacing:-.3px}
+.sub{color:var(--fh-muted);font-size:13.5px;line-height:1.55;margin:0 0 18px}
+.avail{font-size:12.5px;font-weight:700;min-height:18px;margin-top:7px}
+.note{font-size:12px;color:var(--fh-muted);line-height:1.55;margin-top:16px}
+.alt{display:inline-block;margin-top:14px;color:var(--fh-green-700);font-weight:700;font-size:13px}
+.rec-box{background:var(--fh-orange-100);border:1px solid #FFD9BF;border-radius:var(--fh-radius);padding:16px}
+.rec-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:25px;font-weight:800;
+  letter-spacing:3px;color:var(--fh-green-900);background:var(--fh-card);
+  border:1px dashed var(--fh-orange-500);border-radius:var(--fh-radius-sm);
+  padding:12px;width:100%;text-align:center;margin:10px 0}
 </style>
 </head>
 <body>
 
-<div class="social-card">
-  <div class="hero-image"></div>
-  
-  <div class="content">
-    <h1>Create Your Username</h1>
-    <p>This will be your identity across the entire BAWAXICT Community.<br>Your name is reserved to you for 21 days on this device.</p>
-
-    <input type="text" id="username" class="input" placeholder="e.g. AdebayoVibes" maxlength="24" onkeyup="checkUsername()">
-
-    <div id="status" class="status"></div>
-
-    <button onclick="createProfile()" class="btn">Create Profile & Join Community</button>
-
-    <div class="reserved">
-      Your username cannot be changed for 21 days on this device.<br>
-      This prevents multiple account creation.
+<div class="card">
+  <div class="hero">
+    <div class="hero-in">
+      <div class="mk">B</div>
+      <b>BAWAXICT</b>
+      <span>FamilyHub</span>
     </div>
+  </div>
 
-    <a href="index.html" style="color:#0b6b4f; font-weight:700;">Already have a profile? Continue →</a>
+  <div class="body" id="stepName">
+    <h1>Create your username</h1>
+    <p class="sub">This is your identity across the BAWAXICT community.<br>
+      Reserved to you for 21 days on this device.</p>
 
-    <div id="error" class="error"></div>
+    <input class="fh-input" id="username" maxlength="24" autocomplete="nickname"
+           placeholder="e.g. AdebayoVibes" style="text-align:center;font-size:16px">
+    <div class="avail" id="avail"></div>
+
+    <button class="fh-btn fh-btn-accent fh-btn-block" id="createBtn" style="margin-top:14px">
+      Create profile &amp; join community
+    </button>
+    <div class="fh-err" id="error" style="margin-top:8px"></div>
+
+    <p class="note">Your username cannot be changed for 21 days on this device.<br>
+      This prevents multiple account creation.</p>
+    <a class="alt" href="forum.html">Already have a profile? Continue →</a>
+  </div>
+
+  <div class="body" id="stepRecovery" style="display:none">
+    <div class="rec-box">
+      <b style="font-size:14px;color:var(--fh-green-900)">Save your recovery code</b>
+      <input class="rec-code" id="recCode" readonly>
+      <p style="font-size:12px;color:var(--fh-ink-700);margin:0;line-height:1.5">
+        Shown only once. You need it to use <b id="recName">this name</b> on another device.
+      </p>
+      <button class="fh-btn fh-btn-ghost fh-btn-block fh-btn-sm" id="copyBtn" style="margin-top:10px">Copy code</button>
+      <div style="font-size:11.5px;font-weight:700;min-height:16px;margin-top:6px" id="copyMsg"></div>
+    </div>
+    <button class="fh-btn fh-btn-block" id="doneBtn" style="margin-top:14px">I've saved it — enter FamilyHub →</button>
   </div>
 </div>
 
-<script src="config.js"></script>
 <script>
-const apiBase = (window.BAWAXICT_CONFIG && window.BAWAXICT_CONFIG.familyHubApiBase) || '/api/familyhub/';
+(function(){
+'use strict';
+var CFG=window.BAWAXICT_CONFIG||{};
+var API=(CFG.familyHubApiBase||'/api/familyhub/').replace(/\/$/,'');
+var $=function(i){return document.getElementById(i)};
+var VALID=/^[A-Za-z0-9 _.-]{3,24}$/;
 
-function checkUsername() {
-  const name = document.getElementById('username').value.trim();
-  const status = document.getElementById('status');
-  if (name.length < 4) {
-    status.innerHTML = '';
-    return;
+function clientId(){
+  var k='bawaxict_client_id',v='';
+  try{v=localStorage.getItem(k)||''}catch(e){}
+  if(!v){
+    v='web-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+    try{localStorage.setItem(k,v)}catch(e){}
   }
-  status.innerHTML = 'Checking availability...';
-  status.style.color = '#f28a19';
-  
-  fetch(apiBase + 'check-username?name=' + encodeURIComponent(name), {credentials:'include'})
-    .then(r => r.json())
-    .then(d => {
-      if (d.available) {
-        status.innerHTML = '✅ Available';
-        status.style.color = '#0b6b4f';
-      } else {
-        status.innerHTML = '❌ Name already exists. Please choose another name.';
-        status.style.color = '#b42318';
-      }
-    })
-    .catch(() => status.innerHTML = '✓ Looks good');
+  return v;
+}
+function api(p,o){
+  o=o||{};
+  return fetch(API+p,{method:o.method||'GET',credentials:'include',
+    headers:o.body?{'Content-Type':'application/json'}:undefined,body:o.body})
+    .then(function(r){return r.json().catch(function(){return{}}).then(function(d){
+      if(!r.ok){var e=new Error(d.error||'Request failed.');e.data=d;throw e}return d})});
 }
 
-async function createProfile() {
-  const username = document.getElementById('username').value.trim();
-  const error = document.getElementById('error');
-  
-  if (username.length < 4) {
-    error.textContent = 'Username must be at least 4 characters';
-    return;
+var t=null;
+$('username').addEventListener('input',function(){
+  var v=$('username').value.trim();
+  $('error').textContent='';
+  if(t)clearTimeout(t);
+  if(v.length<3){$('avail').textContent='';return}
+  if(!VALID.test(v)){
+    $('avail').style.color='var(--fh-danger)';
+    $('avail').textContent='Use 3–24 letters, numbers, spaces, dot, dash or underscore.';return;
   }
+  $('avail').style.color='var(--fh-muted)';$('avail').textContent='Checking availability…';
+  t=setTimeout(function(){
+    api('/check-username?name='+encodeURIComponent(v)).then(function(d){
+      if(d.available){$('avail').style.color='var(--fh-green-600)';$('avail').textContent='✓ Available';}
+      else{$('avail').style.color='var(--fh-danger)';
+           $('avail').textContent='✗ Already taken — recovery code required.';}
+    }).catch(function(){$('avail').textContent=''});
+  },380);
+});
 
-  error.textContent = 'Creating your profile...';
-
-  try {
-    const res = await fetch('/api/familyhub/join', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ preferredName: username })
-    });
-
-    const data = await res.json();
-
-    if (res.ok && data.success) {
-      localStorage.setItem('bawaxict_username', username);
-      window.location.href = 'index.html';
-    } else {
-      error.textContent = data.error || 'This name already exists. Please choose another name.';
+function join(name,code){
+  var payload={username:name,client_id:clientId()};
+  if(code)payload.recoveryCode=code;
+  $('createBtn').disabled=true;$('createBtn').textContent='Creating your profile…';
+  api('/join',{method:'POST',body:JSON.stringify(payload)}).then(function(d){
+    if(!d.ok)throw new Error(d.error||'Could not create your profile.');
+    try{localStorage.setItem('bawaxict_username',d.username)}catch(e){}
+    if(d.recoveryCode){
+      $('stepName').style.display='none';
+      $('stepRecovery').style.display='';
+      $('recCode').value=d.recoveryCode;
+      $('recName').textContent=d.username;
+    }else{
+      location.href='status.html';
     }
-  } catch(e) {
-    error.textContent = 'Connection error. Please try again.';
-  }
+  }).catch(function(e){
+    if(e.data&&e.data.recoveryRequired){
+      var c=prompt('"'+name+'" is already registered.\n\nEnter its recovery code to use it on this device, or press Cancel to choose another name.');
+      if(c&&c.trim())return join(name,c.trim());
+    }
+    $('error').textContent=e.message||'Could not create your profile.';
+  }).finally(function(){
+    $('createBtn').disabled=false;
+    $('createBtn').textContent='Create profile & join community';
+  });
 }
 
-// Pre-fill if user already has a name
-try {
-  const saved = localStorage.getItem('bawaxict_username') || localStorage.getItem('familyhub_username');
-  if (saved) document.getElementById('username').value = saved;
-} catch(e){}
+$('createBtn').onclick=function(){
+  var v=$('username').value.trim();
+  if(!VALID.test(v)){$('error').textContent='Username must be 3–24 valid characters.';return}
+  join(v,'');
+};
+$('username').addEventListener('keydown',function(e){if(e.key==='Enter')$('createBtn').click()});
+
+$('copyBtn').onclick=function(){
+  var b=$('recCode');b.focus();b.select();b.setSelectionRange(0,999);
+  function fb(){
+    var ok=false;try{ok=document.execCommand('copy')}catch(e){}
+    $('copyMsg').style.color=ok?'var(--fh-green-600)':'var(--fh-danger)';
+    $('copyMsg').textContent=ok?'Copied!':'Select the code and copy it manually.';
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(b.value).then(function(){
+      $('copyMsg').style.color='var(--fh-green-600)';$('copyMsg').textContent='Copied!';
+    }).catch(fb);
+  }else fb();
+};
+$('doneBtn').onclick=function(){location.href='status.html'};
+
+try{
+  var s=localStorage.getItem('bawaxict_username')||localStorage.getItem('familyhub_username')||'';
+  if(s)$('username').value=s.slice(0,24);
+}catch(e){}
+})();
 </script>
 </body>
 </html>
