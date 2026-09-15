@@ -182,20 +182,31 @@ $('done').onclick=function(){location.href=nextTarget()};
 
 /* Already signed in on this device? Go straight through without showing
    the gate. If the cookie is gone but the device is still bound inside its
-   21-day identity, re-join silently rather than asking again. */
+   21-day identity, re-join silently rather than asking again.
+
+   EXCEPTION: if the user just logged out, forum.html has removed
+   bawaxict_client_id. Do NOT mint a new id and probe with it -- read the
+   stored value directly, so a logged-out device falls through to the join
+   form instead of being signed straight back in. That silent re-join is
+   exactly what made Logout look broken. */
+var existingCid='';
+try{ existingCid=localStorage.getItem('bawaxict_client_id')||''; }catch(e){}
+
 api('/session').then(function(s){
   if(s.authenticated){ location.href=nextTarget(); return; }
   throw new Error('no session');
 }).catch(function(){
-  var cid=clientId();
-  api('/device?client_id='+encodeURIComponent(cid)).then(function(d){
+  if(!existingCid) return;            // freshly logged out: show the form
+  api('/device?client_id='+encodeURIComponent(existingCid)).then(function(d){
     if(d&&d.bound&&d.username){
-      return api('/join',{method:'POST',body:JSON.stringify({username:d.username,client_id:cid})})
+      return api('/join',{method:'POST',body:JSON.stringify({username:d.username,client_id:existingCid})})
         .then(function(r){ if(r&&r.ok) location.href=nextTarget(); });
     }
   }).catch(function(){});
 });
 try{
+  /* After an explicit logout the username is cleared too, so the field
+     starts empty and the next person is not nudged back into the old name. */
   var saved=localStorage.getItem('bawaxict_username')||localStorage.getItem('familyhub_username')||'';
   if(saved)$('name').value=saved.slice(0,24);
 }catch(e){}
