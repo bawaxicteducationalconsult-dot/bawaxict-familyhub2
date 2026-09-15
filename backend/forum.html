@@ -258,6 +258,24 @@ img{display:block;max-width:100%}
 @media(min-width:861px){.more-veil{display:none !important}}
 @media(max-width:360px){.more-grid{grid-template-columns:repeat(2,1fr)}}
 
+/* hotspot-only markers: this build serves both hotspot and web-only visitors */
+.hs-tag{display:inline-block;margin-left:auto;padding:1px 7px;border-radius:999px;
+  background:#FFF0E6;color:#E8690F;font-size:9.5px;font-weight:800;
+  letter-spacing:.2px;line-height:1.7;text-transform:uppercase;white-space:nowrap}
+.hs-note{display:block;font-size:10.5px;font-weight:600;color:var(--ink-500);
+  line-height:1.35;margin-top:3px}
+.more-item .hs-tag{margin-left:0;margin-top:4px}
+
+/* engagement badge, inline next to a username */
+.who-line{display:flex;align-items:center;gap:0;min-width:0;flex-wrap:wrap}
+.who-line b{min-width:0;overflow-wrap:anywhere}
+.badge-mini{display:inline-flex;align-items:center;gap:4px;vertical-align:middle;
+  align-self:center;width:auto;max-width:max-content;
+  padding:1px 7px 1px 5px;border-radius:999px;font-size:10px;font-weight:800;
+  line-height:1.6;color:#fff;white-space:nowrap;flex:none;margin-left:6px}
+.badge-mini .bdot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.9);flex:none}
+@media(max-width:560px){.badge-mini{font-size:9.5px;padding:1px 6px 1px 4px;margin-left:5px}}
+
 /* daily pulse */
 .pulse-q{font-size:14px;line-height:1.5;color:var(--ink-900);font-weight:600;margin:4px 0 12px}
 .pulse-btn{width:100%;min-height:44px;border:0;border-radius:12px;background:var(--green-700);
@@ -391,7 +409,7 @@ img{display:block;max-width:100%}
       <a class="nav-item" href="institute.html"><span class="ic">▰</span>Learning</a>
       <a class="nav-item" href="skills.html"><span class="ic">▣</span>Opportunities</a>
       <a class="nav-item" href="games.html"><span class="ic">⌁</span>Entertainment</a>
-      <a class="nav-item" href="tickets.html"><span class="ic">◇</span>Internet Tickets</a>
+      <a class="nav-item" href="tickets.html" title="Buy WiFi access — only useful if you are connected to the BAWAXICT hotspot"><span class="ic">◇</span>Internet Tickets<span class="hs-tag">Hotspot</span></a>
       <a class="nav-item" href="report.html"><span class="ic">◉</span>Support</a>
     </nav>
 
@@ -399,7 +417,7 @@ img{display:block;max-width:100%}
 
     <div class="wifi-card"><span class="wifi-dot"></span>Connected · BAWAXICT WiFi</div>
     <div class="sidebar-foot">
-      <a class="hotspot-return" href="http://bawaxict.edu.net/status" title="Return to BAWAXICT WIFI hotspot page">↩ Back to Hotspot</a>
+      <a class="hotspot-return" href="http://bawaxict.edu.net/status" title="Opens the BAWAXICT WiFi portal — only reachable while connected to the hotspot">↩ Back to Hotspot<span class="hs-tag">Hotspot</span></a>
       <a class="logout-link" href="#logout" id="logoutBtn">↪ Logout</a>
     </div>
   </aside>
@@ -491,7 +509,7 @@ img{display:block;max-width:100%}
       <div class="status-row"><span class="status-dot" id="statusDot"></span>Status<b id="statusLabel">Connecting…</b></div>
       <div class="status-row"><span class="status-dot"></span>Members online<b id="onlineCountLabel">—</b></div>
       <div class="status-row"><span class="status-dot"></span>Access<b id="accessTypeLabel">Web Community</b></div>
-      <a class="hotspot-cta" href="http://bawaxict.edu.net/status">Back to Hotspot →</a>
+      <a class="hotspot-cta" href="http://bawaxict.edu.net/status" title="Only reachable while connected to the BAWAXICT hotspot">Back to Hotspot →<span class="hs-note">Only works on the BAWAXICT WiFi</span></a>
     </div>
 
     <div class="rr-card msg-card">
@@ -563,13 +581,13 @@ img{display:block;max-width:100%}
       <a class="more-item" href="institute.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l9-3 9 3-9 3z"/><path d="M6 10v6c0 1.7 2.7 3 6 3s6-1.3 6-3v-6"/></svg></span>Learning</a>
       <a class="more-item" href="skills.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg></span>Opportunities</a>
       <a class="more-item" href="games.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 11v3M5.5 12.5h3M15.5 12h.01M18 14h.01"/></svg></span>Entertainment</a>
-      <a class="more-item" href="tickets.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 002-2h14a2 2 0 002 2v2a2 2 0 000 4v2a2 2 0 00-2 2H5a2 2 0 00-2-2v-2a2 2 0 000-4z"/><path d="M14 6v12"/></svg></span>Internet Tickets</a>
+      <a class="more-item" href="tickets.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 002-2h14a2 2 0 002 2v2a2 2 0 000 4v2a2 2 0 00-2 2H5a2 2 0 00-2-2v-2a2 2 0 000-4z"/><path d="M14 6v12"/></svg></span>Internet Tickets<span class="hs-tag">Hotspot</span></a>
       <a class="more-item" href="report.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 17h.01M9.5 9.5a2.5 2.5 0 015 .5c0 1.7-2.5 2-2.5 4"/></svg></span>Support</a>
       <a class="more-item" href="invite.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 12h18M12 8v13M12 8S10 3 7.5 4.5 9 8 12 8zM12 8s2-5 4.5-3.5S15 8 12 8z"/></svg></span>Invite &amp; Earn</a>
       <a class="more-item" href="rewards.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.5 6 .9-4.3 4.3 1 6.1-5.3-2.9-5.3 2.9 1-6.1L3.4 9.4l6-.9z"/></svg></span>Rewards</a>
     </div>
     <div class="more-foot">
-      <a class="more-hotspot" href="http://bawaxict.edu.net/status">&#8617; Back to Hotspot</a>
+      <a class="more-hotspot" href="http://bawaxict.edu.net/status" title="Only reachable while connected to the BAWAXICT hotspot">&#8617; Back to Hotspot<span class="hs-note">On BAWAXICT WiFi only</span></a>
       <button class="more-logout" id="moreLogoutBtn" type="button">&#8618; Logout</button>
     </div>
   </div>
@@ -748,6 +766,16 @@ function apiFetch(path, opt){
 
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>'"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]; }); }
 function avatarInitial(name){ return ((name || '?').trim().charAt(0) || '?').toUpperCase(); }
+
+/* Engagement badge markup for a name. Novice (tier 0) renders nothing:
+   it is the default for every new member, so showing it would put a chip on
+   every row and defeat the point of the badge being a signal. */
+function badgeHtml(b){
+  if(!b || !b.tier) return '';
+  return '<span class="badge-mini" style="background:' + esc(b.color || '#98A2B3') + '"'
+       + ' title="' + esc(b.label) + ' member">'
+       + '<span class="bdot"></span>' + esc(b.label) + '</span>';
+}
 function fmtTime(t){ try{ return new Date(t * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }catch(e){ return ''; } }
 function timeAgo(t){
   var s = Math.max(0, Math.floor(Date.now()/1000 - Number(t || 0)));
@@ -1025,7 +1053,7 @@ function postCard(m){
   if(m.id) card.setAttribute('data-post-id', m.id);
   card.innerHTML =
     '<div class="post-head"><span class="avatar" data-author="' + esc(name) + '">' + esc(avatarInitial(name)) + '</span>' +
-    '<div class="post-who"><b data-author="' + esc(name) + '">' + esc(who) + '</b>' +
+    '<div class="post-who"><span class="who-line"><b data-author="' + esc(name) + '">' + esc(who) + '</b>' + badgeHtml(m.badge) + '</span>' +
     '<span class="meta">Community · ' + esc(timeAgo(m.created_at)) + ' · ' + esc(fmtTime(m.created_at)) + '</span></div></div>' +
     '<p class="post-body"></p>' +
     (m.photo_id ? '<div class="post-photo"><img loading="lazy" alt="Photo shared by ' + esc(name) + '" src="' + API + '/media/' + Number(m.photo_id) + '"></div>' : '') +
@@ -1100,9 +1128,20 @@ function commentRow(c){
   var bd = document.createElement('div'); bd.className = 'comment-body';
   var b = document.createElement('b'); b.textContent = name === CHAT_USER ? 'YOU' : name;
   b.addEventListener('click', function(){ openAuthor(name); });
+  var cbadge = null;
+  if(c.badge && c.badge.tier){
+    cbadge = document.createElement('span');
+    cbadge.className = 'badge-mini';
+    cbadge.style.background = c.badge.color || '#98A2B3';
+    cbadge.title = c.badge.label + ' member';
+    cbadge.innerHTML = '<span class="bdot"></span>';
+    cbadge.appendChild(document.createTextNode(c.badge.label));
+  }
   var meta = document.createElement('span'); meta.className = 'meta'; meta.textContent = timeAgo(c.created_at);
   var p = document.createElement('p'); p.textContent = c.message || '';
-  bd.appendChild(b); bd.appendChild(meta); bd.appendChild(p);
+  var whoLine = document.createElement('span'); whoLine.className = 'who-line';
+  whoLine.appendChild(b); if(cbadge) whoLine.appendChild(cbadge);
+  bd.appendChild(whoLine); bd.appendChild(meta); bd.appendChild(p);
   if(name !== CHAT_USER){
     var rl = document.createElement('button'); rl.type = 'button'; rl.className = 'comment-report'; rl.textContent = '🚩 Report';
     rl.addEventListener('click', function(){ openReport({ relatedUser: name, relatedMessage: c.message || '', category: 'Abusive or insulting member' }); });

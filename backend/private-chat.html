@@ -203,7 +203,7 @@ body{height:100dvh;overflow:hidden}
       <button class="peer" id="peerBtn">
         <span class="fh-av fh-av-sm" id="peerAv">?</span>
         <span>
-          <span class="peer-name" id="peerName">Select a conversation</span><br>
+          <span class="peer-name" id="peerName">Select a conversation</span><span id="peerBadge"></span><br>
           <span class="peer-sub off" id="peerSub">—</span>
         </span>
       </button>
@@ -313,6 +313,13 @@ function J(o){return JSON.stringify(o||{})}
 function esc(s){return String(s==null?'':s).replace(/[&<>'"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});}
 function initial(n){return ((n||'?').trim().charAt(0)||'?').toUpperCase()}
+/* Tier badge next to a name. Novice (tier 0) renders nothing -- it is the
+   default state, so showing it everywhere would just be noise. */
+function badgeHtml(b){
+  if(!b||!b.tier) return '';
+  return '<span class="fh-badge-mini" style="background:'+esc(b.color||'#98A2B3')+'"'
+       +' title="'+esc(b.label)+' member"><span class="bdot"></span>'+esc(b.label)+'</span>';
+}
 function mediaUrl(id){return API+'/media/'+id}
 function toast(t){
   var e=document.createElement('div');e.className='fh-toast';e.textContent=t;
@@ -421,7 +428,7 @@ function renderConvs(){
       +'<div class="conv-av"><span class="fh-av">'+esc(initial(c.username))+'</span>'
       +'<i class="conv-on'+(c.online?'':' off')+'"></i></div>'
       +'<div class="conv-main"><div class="conv-top">'
-      +'<span class="conv-name">'+esc(c.username)+'</span>'
+      +'<span class="conv-name">'+esc(c.username)+'</span>'+badgeHtml(c.badge)
       +'<span class="conv-time">'+hhmm(c.created_at)+'</span></div>'
       +'<div class="conv-last">'+esc(preview(c))+'</div></div>'
       +(c.unread?'<span class="conv-badge">'+c.unread+'</span>':'')+'</div>';
@@ -440,6 +447,7 @@ function open(username){
   $('peerName').textContent=username;
   $('peerAv').textContent=initial(username);
   var c=convs.filter(function(x){return x.username===username})[0];
+  $('peerBadge').innerHTML = c ? badgeHtml(c.badge) : '';
   setPresence(c?c.online:false);
   renderConvs();
   loadThread(true);

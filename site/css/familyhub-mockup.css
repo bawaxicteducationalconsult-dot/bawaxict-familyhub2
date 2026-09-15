@@ -294,3 +294,50 @@ textarea.fh-input{resize:vertical;min-height:96px;line-height:1.55}
     scroll-behavior:auto !important;
   }
 }
+
+/* ==========================================================================
+   ENGAGEMENT BADGE — inline, next to a username
+   Deliberately compact: a coloured dot plus a short label, sized to sit on a
+   post header or a chat row without pushing the name around. Novice is not
+   rendered by the clients (it is the default state and would add noise to
+   every single row), but the API returns it so the decision stays in the UI.
+   ========================================================================== */
+.fh-badge-mini{
+  display:inline-flex;align-items:center;gap:4px;vertical-align:middle;
+  align-self:center;width:auto;max-width:max-content;
+  padding:1px 7px 1px 5px;border-radius:var(--fh-pill);
+  font-size:10px;font-weight:800;letter-spacing:.2px;line-height:1.6;
+  color:#fff;white-space:nowrap;flex:none;
+}
+.fh-badge-mini .bdot{
+  width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.9);flex:none;
+}
+/* Dot-only variant for very tight rows (chat list, typing row). */
+.fh-badge-dot{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  vertical-align:middle;flex:none;margin-left:5px;
+  box-shadow:0 0 0 1.5px var(--fh-card);
+}
+@media(max-width:560px){
+  /* Keep the tier readable but give long usernames room on narrow phones. */
+  .fh-badge-mini{font-size:9.5px;padding:1px 6px 1px 4px}
+}
+
+/* ==========================================================================
+   HOTSPOT-ONLY MARKERS
+   The web build is used by both hotspot users and general web visitors.
+   These mark the destinations that only mean something to someone actually
+   connected to the BAWAXICT WiFi, so a web-only visitor is not sent to a
+   ticket page they cannot use or a portal that does not exist for them.
+   ========================================================================== */
+.fh-hs-tag{
+  display:inline-block;margin-left:6px;padding:1px 7px;border-radius:var(--fh-pill);
+  background:var(--fh-orange-100);color:var(--fh-orange-600);
+  font-size:9.5px;font-weight:800;letter-spacing:.2px;line-height:1.7;
+  text-transform:uppercase;white-space:nowrap;vertical-align:middle;
+}
+.fh-nav-item .fh-hs-tag{margin-left:auto}
+.fh-hs-note{
+  display:block;font-size:10.5px;font-weight:600;color:var(--fh-muted);
+  line-height:1.35;margin-top:2px;
+}

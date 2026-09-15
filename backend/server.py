@@ -477,6 +477,20 @@ def badge_for(contributions, likes_received, active_days):
             best = t
     return best
 
+def badge_mini(tier):
+    """Compact badge for list responses (feed, comments, members, chat).
+
+    Reads the denormalized users.badge_tier, which bump_stat() keeps current,
+    so rendering a badge next to a name costs one JOIN rather than recomputing
+    thresholds per row. Tier 0 (Novice) is returned too -- the client decides
+    whether to show it.
+    """
+    try: tier = int(tier or 0)
+    except Exception: tier = 0
+    t = next((x for x in BADGE_TIERS if x[0] == tier), BADGE_TIERS[0])
+    return {'tier': t[0], 'key': t[1], 'label': t[2], 'color': t[3]}
+
+
 def badge_payload(user):
     """Badge block for API responses, including progress to the next tier."""
     contributions = int(user['stat_posts'] or 0) + int(user['stat_comments'] or 0)
@@ -1113,7 +1127,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             user=auth(con,{},self)
             if path=='/api/members':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
-                rows=online_for(con,user['id']); out=[{'username':r['username'],'online':True,'hidden':bool(r['hidden']),'self':r['id']==user['id']} for r in rows]
+                rows=online_for(con,user['id'])
+                tiers={x['id']:x['badge_tier'] for x in con.execute('SELECT id,badge_tier FROM users').fetchall()}
+                out=[{'username':r['username'],'online':True,'hidden':bool(r['hidden']),'self':r['id']==user['id'],'badge':badge_mini(tiers.get(r['id'],0))} for r in rows]
                 total=con.execute('SELECT COUNT(*) n FROM users WHERE last_seen>=?',(int(time.time())-ONLINE_WINDOW,)).fetchone()['n']
                 con.close(); send_json(self,{'members':out,'onlineCount':total}); return
             if path=='/api/profile':
@@ -1153,6 +1169,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                       '(SELECT COUNT(*) FROM likes l WHERE l.post_id=c.id) AS like_count,'
                       '(SELECT COUNT(*) FROM comments cm WHERE cm.post_id=c.id) AS comment_count,'
                       '(SELECT m.id FROM media m WHERE m.id=c.media_id AND m.expires_at>strftime("%s","now")) AS photo_id,'
+                      '(SELECT u.badge_tier FROM users u WHERE u.id=c.user_id) AS badge_tier,'
                       'EXISTS(SELECT 1 FROM likes l2 WHERE l2.post_id=c.id AND l2.user_id=?) AS liked FROM community c')
                 if sort=='top':
                     rows=con.execute(base+' ORDER BY (like_count+comment_count) DESC, c.id DESC LIMIT 150',(user['id'],)).fetchall()
@@ -1163,7 +1180,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     rows=list(reversed(rows))
                 out=[]
                 for r in rows:
-                    d=dict(r); d['liked']=bool(d['liked']); d['like_count']=int(d['like_count']); d['comment_count']=int(d['comment_count']); out.append(d)
+                    d=dict(r); d['liked']=bool(d['liked']); d['like_count']=int(d['like_count']); d['comment_count']=int(d['comment_count'])
+                    d['badge']=badge_mini(d.pop('badge_tier',0)); out.append(d)
                 con.close(); send_json(self,{'messages':out,'latestId':int(rows[-1]['id']) if rows else since}); return
             if path=='/api/community/following':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
@@ -1171,32 +1189,40 @@ class Handler(http.server.BaseHTTPRequestHandler):
                                  '(SELECT COUNT(*) FROM likes l WHERE l.post_id=c.id) AS like_count,'
                                  '(SELECT COUNT(*) FROM comments cm WHERE cm.post_id=c.id) AS comment_count,'
                                  '(SELECT m.id FROM media m WHERE m.id=c.media_id AND m.expires_at>strftime("%s","now")) AS photo_id,'
+                                 '(SELECT u.badge_tier FROM users u WHERE u.id=c.user_id) AS badge_tier,'
                                  'EXISTS(SELECT 1 FROM likes l2 WHERE l2.post_id=c.id AND l2.user_id=?) AS liked '
                                  'FROM community c JOIN follows f ON f.followed_id=c.user_id WHERE f.follower_id=? ORDER BY c.id DESC LIMIT 150',(user['id'],user['id'])).fetchall()
                 rows=list(reversed(rows))
                 out=[]
                 for r in rows:
-                    d=dict(r); d['liked']=bool(d['liked']); d['like_count']=int(d['like_count']); d['comment_count']=int(d['comment_count']); out.append(d)
+                    d=dict(r); d['liked']=bool(d['liked']); d['like_count']=int(d['like_count']); d['comment_count']=int(d['comment_count'])
+                    d['badge']=badge_mini(d.pop('badge_tier',0)); out.append(d)
                 con.close(); send_json(self,{'messages':out}); return
             if path=='/api/community/comments':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
                 try: pid=int(params.get('postId',['0'])[0] or 0)
                 except Exception: pid=0
-                rows=con.execute('SELECT id,username_snapshot,message,created_at FROM comments WHERE post_id=? ORDER BY id ASC LIMIT 150',(pid,)).fetchall()
-                con.close(); send_json(self,{'comments':[dict(r) for r in rows]}); return
+                rows=con.execute('SELECT cm.id,cm.username_snapshot,cm.message,cm.created_at,(SELECT u.badge_tier FROM users u WHERE u.id=cm.user_id) AS badge_tier FROM comments cm WHERE cm.post_id=? ORDER BY cm.id ASC LIMIT 150',(pid,)).fetchall()
+                out=[]
+                for r in rows:
+                    d=dict(r); d['badge']=badge_mini(d.pop('badge_tier',0)); out.append(d)
+                con.close(); send_json(self,{'comments':out}); return
             if path=='/api/conversations':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
-                rows=con.execute('''SELECT t.id,t.last_activity,u.id AS other_id,u.username,u.hidden
+                rows=con.execute('''SELECT t.id,t.last_activity,u.id AS other_id,u.username,u.hidden,u.badge_tier
                                     FROM threads t JOIN users u ON u.id=CASE WHEN t.user_a=? THEN t.user_b ELSE t.user_a END
                                     WHERE t.user_a=? OR t.user_b=? ORDER BY t.last_activity DESC''',(user['id'],user['id'],user['id'])).fetchall()
                 items=[]
+                # Hoisted out of the loop: it was being recomputed per conversation.
+                online_ids={row['id'] for row in online_for(con,user['id'])}
                 for r in rows:
                     last=con.execute('SELECT message,sender_id,created_at FROM private_messages WHERE thread_id=? ORDER BY id DESC LIMIT 1',(r['id'],)).fetchone()
                     last_read=con.execute('SELECT last_read FROM private_reads WHERE user_id=? AND thread_id=?',(user['id'],r['id'])).fetchone()
                     lr=int(last_read['last_read']) if last_read else 0
                     unread=con.execute('SELECT COUNT(*) n FROM private_messages WHERE thread_id=? AND recipient_id=? AND id>?',(r['id'],user['id'],lr)).fetchone()['n']
-                    online_ids={row['id'] for row in online_for(con,user['id'])}
-                    items.append({'threadId':r['id'],'username':r['username'],'hidden':bool(r['hidden']),'online':r['id'] in online_ids,'message':last['message'] if last else 'Conversation started','created_at':last['created_at'] if last else r['last_activity'],'unread':int(unread)})
+                    # BUGFIX: this compared the THREAD id against a set of USER ids,
+                    # so the online dot in the conversation list was effectively random.
+                    items.append({'threadId':r['id'],'username':r['username'],'hidden':bool(r['hidden']),'online':r['other_id'] in online_ids,'message':last['message'] if last else 'Conversation started','created_at':last['created_at'] if last else r['last_activity'],'unread':int(unread),'badge':badge_mini(r['badge_tier'])})
                 con.close(); send_json(self,{'conversations':items}); return
             if path=='/api/private':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
