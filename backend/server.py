@@ -34,6 +34,10 @@ MAX_TEXT = 4000
 MAX_MESSAGES = 150
 # Stage 4 media policy: conservative until larger cloud storage is available.
 MEDIA_RETENTION_SECONDS = 3 * 24 * 60 * 60
+# Feed photos are deliberately shorter-lived than chat attachments: the feed
+# itself only keeps posts for PUBLIC_RETENTION (5h), so a 12h photo TTL both
+# outlives its post and caps storage growth on the Oracle VM.
+POST_MEDIA_RETENTION_SECONDS = 12 * 60 * 60
 MAX_IMAGE_BYTES = 2 * 1024 * 1024
 MAX_VOICE_BYTES = 3 * 1024 * 1024
 MEDIA_DIR = BASE / "media"
@@ -399,6 +403,8 @@ def init_db():
             "ALTER TABLE users ADD COLUMN whatsapp TEXT",
             "ALTER TABLE users ADD COLUMN social_link TEXT",
             "ALTER TABLE users ADD COLUMN hide_photo INTEGER NOT NULL DEFAULT 0",
+            # Photo posts: the feed composer can now attach one image.
+            "ALTER TABLE community ADD COLUMN media_id INTEGER",
             # Mockup rebuild: delivery/seen receipts for private chat. Additive only.
             "ALTER TABLE private_messages ADD COLUMN delivered_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE private_messages ADD COLUMN seen_at INTEGER NOT NULL DEFAULT 0",
@@ -469,6 +475,11 @@ def cleanup():
             try: (MEDIA_DIR / m['storage_name']).unlink(missing_ok=True)
             except Exception: pass
         con.execute("DELETE FROM media WHERE expires_at < ?",(now,))
+        # Feed posts are swept at PUBLIC_RETENTION (5h) but their photos carry a
+        # 12h TTL, so expire any post photo whose post is already gone rather
+        # than letting the file sit unreferenced until its own deadline.
+        con.execute("UPDATE media SET expires_at=? WHERE kind='post_image' AND attached_message_id IS NOT NULL AND attached_message_id NOT IN (SELECT id FROM community)",(now-1,))
+        con.execute("UPDATE community SET media_id=NULL WHERE media_id IS NOT NULL AND media_id NOT IN (SELECT id FROM media)")
         # Threads with no messages and no recent activity remain as the user's permanent private list.
         con.commit(); con.close()
 
@@ -942,7 +953,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if not u: con.close(); send_json(self,{'error':'User not found.'},404); return
                 if u['hidden'] and u['id']!=user['id']:
                     con.close(); send_json(self,{'username':u['username'],'hidden':True,'posts':[]}); return
-                rows=con.execute('SELECT id,username_snapshot,message,created_at FROM community WHERE user_id=? ORDER BY id DESC LIMIT 150',(u['id'],)).fetchall()
+                rows=con.execute('SELECT id,username_snapshot,message,created_at,(SELECT m.id FROM media m WHERE m.id=community.media_id AND m.expires_at>strftime("%s","now")) AS photo_id FROM community WHERE user_id=? ORDER BY id DESC LIMIT 150',(u['id'],)).fetchall()
                 con.close(); send_json(self,{'username':u['username'],'hidden':False,'posts':[dict(r) for r in rows]}); return
             if path=='/api/blocks':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
@@ -951,9 +962,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
                 since=max(0,int(params.get('since',['0'])[0] or 0))
                 sort=str(params.get('sort',[''])[0] or '')
+                # photoId resolves through media so an expired/swept photo simply
+                # disappears from the post instead of 404-ing in the client.
                 base=('SELECT c.id,c.username_snapshot,c.message,c.created_at,'
                       '(SELECT COUNT(*) FROM likes l WHERE l.post_id=c.id) AS like_count,'
                       '(SELECT COUNT(*) FROM comments cm WHERE cm.post_id=c.id) AS comment_count,'
+                      '(SELECT m.id FROM media m WHERE m.id=c.media_id AND m.expires_at>strftime("%s","now")) AS photo_id,'
                       'EXISTS(SELECT 1 FROM likes l2 WHERE l2.post_id=c.id AND l2.user_id=?) AS liked FROM community c')
                 if sort=='top':
                     rows=con.execute(base+' ORDER BY (like_count+comment_count) DESC, c.id DESC LIMIT 150',(user['id'],)).fetchall()
@@ -971,6 +985,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 rows=con.execute('SELECT c.id,c.username_snapshot,c.message,c.created_at,'
                                  '(SELECT COUNT(*) FROM likes l WHERE l.post_id=c.id) AS like_count,'
                                  '(SELECT COUNT(*) FROM comments cm WHERE cm.post_id=c.id) AS comment_count,'
+                                 '(SELECT m.id FROM media m WHERE m.id=c.media_id AND m.expires_at>strftime("%s","now")) AS photo_id,'
                                  'EXISTS(SELECT 1 FROM likes l2 WHERE l2.post_id=c.id AND l2.user_id=?) AS liked '
                                  'FROM community c JOIN follows f ON f.followed_id=c.user_id WHERE f.follower_id=? ORDER BY c.id DESC LIMIT 150',(user['id'],user['id'])).fetchall()
                 rows=list(reversed(rows))
@@ -1413,8 +1428,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 con.close(); send_json(self,{'error':str(e)},400); return
             safe_name=re.sub(r'[^A-Za-z0-9._-]+','_',Path(filename).name)[:120] or 'upload'
             mime=mime.split(';',1)[0].strip().lower()
+            # scope=post marks a feed photo, which gets the shorter 12h TTL.
+            # Anything else keeps the existing 3-day chat-attachment policy.
+            scope=urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get('scope',[''])[0].strip().lower()
             if mime in ALLOWED_IMAGE_TYPES:
-                kind='image'; limit=MAX_IMAGE_BYTES
+                kind='post_image' if scope=='post' else 'image'
+                limit=MAX_IMAGE_BYTES
             elif mime in ALLOWED_VOICE_TYPES:
                 kind='voice'; limit=MAX_VOICE_BYTES
             else:
@@ -1422,10 +1441,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if len(data_bytes)==0 or len(data_bytes)>limit:
                 con.close(); send_json(self,{'error':f'{kind.title()} file is empty or exceeds the current size limit.'},413); return
             now=int(time.time()); storage=secrets.token_hex(16)+'_'+safe_name
+            ttl = POST_MEDIA_RETENTION_SECONDS if kind=='post_image' else MEDIA_RETENTION_SECONDS
             try:
                 (MEDIA_DIR/storage).write_bytes(data_bytes)
-                cur=con.execute('INSERT INTO media(owner_id,kind,mime_type,original_name,storage_name,size_bytes,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?)',(user['id'],kind,mime,safe_name,storage,len(data_bytes),now,now+MEDIA_RETENTION_SECONDS))
-                mid=cur.lastrowid; con.commit(); m=con.execute('SELECT * FROM media WHERE id=?',(mid,)).fetchone(); con.close(); send_json(self,{'ok':True,'media':media_response(m),'policy':{'retentionDays':3,'autoDelete':True}}); return
+                cur=con.execute('INSERT INTO media(owner_id,kind,mime_type,original_name,storage_name,size_bytes,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?)',(user['id'],kind,mime,safe_name,storage,len(data_bytes),now,now+ttl))
+                mid=cur.lastrowid; con.commit(); m=con.execute('SELECT * FROM media WHERE id=?',(mid,)).fetchone(); con.close(); send_json(self,{'ok':True,'media':media_response(m),'policy':{'retentionHours':ttl//3600,'autoDelete':True}}); return
             except Exception:
                 try: (MEDIA_DIR/storage).unlink(missing_ok=True)
                 except Exception: pass
@@ -1525,14 +1545,30 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 t=get_thread(con,user['id'],other['id'],True);con.commit();con.close();send_json(self,{'ok':True,'threadId':t['id'],'username':other['username']});return
             if path=='/api/community':
                 message=str(data.get('message','')).strip()
-                if not message or len(message)>MAX_TEXT:con.close();send_json(self,{'error':'Message is empty or too long.'},400);return
+                # Photo posts: validate the attachment first, because a post with
+                # an image is allowed to have no caption.
+                media_id=data.get('mediaId')
+                media_row=None
+                if media_id:
+                    try: media_id=int(media_id)
+                    except Exception: con.close();send_json(self,{'error':'Invalid photo.'},400);return
+                    media_row=con.execute(
+                        'SELECT * FROM media WHERE id=? AND owner_id=? AND expires_at>?',
+                        (media_id,user['id'],int(time.time()))).fetchone()
+                    if not media_row or media_row['kind'] not in ('image','post_image'):
+                        con.close();send_json(self,{'error':'Photo not found or expired. Please re-attach it.'},400);return
+                else:
+                    media_id=None
+                if len(message)>MAX_TEXT:con.close();send_json(self,{'error':'Message is too long.'},400);return
+                if not message and not media_id:con.close();send_json(self,{'error':'Message is empty or too long.'},400);return
                 if not allow_message(user['id']):
                     con.close(); send_json(self,{'error':'You are sending messages too quickly. Please wait a few seconds.'},429); return
                 hit=contains_abuse(message)
                 if hit:
                     now=int(time.time());con.execute('INSERT INTO flags(scope,username,term,message,created_at) VALUES(?,?,?,?,?)',('forum',user['username'],hit,message,now));con.commit();con.close()
                     send_json(self,{'error':'Message blocked: it looks like it contains abusive or insulting language. Please keep Community Chat respectful — repeated attempts are visible to the admin.'},400);return
-                now=int(time.time()); cur=con.execute('INSERT INTO community(user_id,username_snapshot,message,created_at) VALUES(?,?,?,?)',(user['id'],user['username'],message,now)); message_id=cur.lastrowid
+                now=int(time.time()); cur=con.execute('INSERT INTO community(user_id,username_snapshot,message,created_at,media_id) VALUES(?,?,?,?,?)',(user['id'],user['username'],message,now,media_id)); message_id=cur.lastrowid
+                if media_id: con.execute('UPDATE media SET attached_message_id=? WHERE id=?',(message_id,media_id))
 
                 add_activity(
                     con,
