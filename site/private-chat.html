@@ -87,6 +87,28 @@ body{height:100dvh;overflow:hidden}
 .grp.me .meta{justify-content:flex-end}
 .tick{font-size:12px;letter-spacing:-2px;color:var(--fh-faint)}
 .tick.seen{color:var(--fh-green-500)}
+.bub.deleted{background:var(--fh-bg);border-style:dashed;color:var(--fh-muted)}
+.grp.me .bub.deleted{background:rgba(255,255,255,.14);color:rgba(255,255,255,.75);border-color:rgba(255,255,255,.3)}
+.meta .edited{font-style:italic;opacity:.85}
+/* long-press / tap action sheet for your own messages */
+.msg-sheet{position:fixed;inset:0;z-index:500;display:none;align-items:flex-end;
+  justify-content:center;background:rgba(11,46,35,.45)}
+.msg-sheet.open{display:flex}
+.msg-sheet-box{width:100%;max-width:420px;background:var(--fh-card);
+  border-radius:18px 18px 0 0;padding:8px 12px calc(14px + env(safe-area-inset-bottom));
+  box-shadow:0 -10px 32px rgba(11,46,35,.25)}
+.msg-sheet-box .grab{width:38px;height:4px;border-radius:999px;background:var(--fh-border);margin:4px auto 10px}
+.msg-act{display:flex;align-items:center;gap:10px;width:100%;min-height:50px;padding:0 14px;
+  border:0;background:none;font-family:inherit;font-size:14.5px;font-weight:700;
+  color:var(--fh-ink);cursor:pointer;border-radius:12px;text-align:left}
+.msg-act:active{background:var(--fh-bg)}
+.msg-act.danger{color:var(--fh-danger)}
+.msg-act[disabled]{opacity:.4;cursor:not-allowed}
+/* inline edit box */
+.edit-wrap{padding:8px 0}
+.edit-wrap textarea{width:100%;border:1px solid var(--fh-green-500);border-radius:12px;
+  padding:10px 12px;font-family:inherit;font-size:16px;resize:vertical;min-height:70px;outline:0}
+.edit-actions{display:flex;gap:8px;margin-top:8px}
 
 .typing-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:12px}
 .typing-bub{background:var(--fh-card);border:1px solid var(--fh-border);border-radius:16px 16px 16px 5px;
@@ -235,6 +257,15 @@ body{height:100dvh;overflow:hidden}
       <div id="ppRows"></div>
       <button class="fh-btn fh-btn-block" id="ppFollow" style="margin-top:16px">Follow</button>
     </div>
+  </div>
+</div>
+
+<div class="msg-sheet" id="msgSheet" role="dialog" aria-modal="true" aria-label="Message actions">
+  <div class="msg-sheet-box">
+    <div class="grab" aria-hidden="true"></div>
+    <button class="msg-act" id="msgEdit" type="button">✏️ Edit message</button>
+    <button class="msg-act danger" id="msgDelete" type="button">🗑 Delete message</button>
+    <button class="msg-act" id="msgCancel" type="button">Cancel</button>
   </div>
 </div>
 
@@ -471,6 +502,7 @@ function render(scroll){
       body='<div class="bub media"><audio controls preload="metadata" src="'+mediaUrl(a.id)+'"></audio></div>';
     }
     if(m.message) body+='<div class="bub">'+esc(m.message)+'</div>';
+    if(m.deleted_at) body='<div class="bub deleted"><i>🚫 This message was deleted</i></div>';
     if(!body) body='<div class="bub"><i class="fh-muted">Attachment expired</i></div>';
 
     var tick='';
@@ -480,10 +512,11 @@ function render(scroll){
       else if(r&&r.deliveredAt) tick='<span class="tick" title="Delivered">✓✓</span>';
       else tick='<span class="tick" title="Sent">✓</span>';
     }
-    html+='<div class="grp'+(mine?' me':'')+(showAv?' show-av':'')+'">'
+    html+='<div class="grp'+(mine?' me':'')+(showAv?' show-av':'')+'"'
+      +(mine&&!m.deleted_at?' data-mid="'+m.id+'" data-can-edit="'+((Date.now()/1000-m.created_at)<=EDIT_WINDOW?'1':'0')+'"':'')+'>'
       +'<span class="fh-av fh-av-sm grp-av">'+esc(initial(m.sender_snapshot))+'</span>'
       +'<div class="grp-stack">'+body
-      +(last?'<div class="meta">'+esc(hhmm(m.created_at))+' '+tick+'</div>':'')
+      +(last?'<div class="meta">'+(m.edited_at?'<span class="edited">edited</span> ':'')+esc(hhmm(m.created_at))+' '+tick+'</div>':'')
       +'</div></div>';
     lastSender=m.sender_snapshot;
   });
@@ -495,6 +528,109 @@ function render(scroll){
   if(scroll!==false) box.scrollTop=box.scrollHeight;
 }
 $('lightbox').onclick=function(){this.classList.remove('open')};
+
+/* ---------------- edit / delete your own messages ----------------
+   Long-press (touch) or click your own bubble to open the action sheet.
+   Edit is allowed inside EDIT_WINDOW; the server enforces the same limit,
+   so a stale tab cannot bypass it. Delete is a soft delete: the recipient
+   keeps a "message was deleted" tombstone rather than the row vanishing,
+   which keeps receipts and ordering intact. */
+var EDIT_WINDOW = 15 * 60;
+var sheetMid = null;
+
+function openMsgSheet(mid, canEdit){
+  sheetMid = mid;
+  $('msgEdit').disabled = !canEdit;
+  $('msgEdit').title = canEdit ? '' : 'Messages can only be edited for 15 minutes';
+  $('msgSheet').classList.add('open');
+}
+function closeMsgSheet(){ $('msgSheet').classList.remove('open'); sheetMid = null; }
+$('msgCancel').onclick = closeMsgSheet;
+$('msgSheet').onclick = function(e){ if(e.target === this) closeMsgSheet(); };
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && $('msgSheet').classList.contains('open')) closeMsgSheet();
+});
+
+(function(){
+  var box = $('msgs'), timer = null, longPressed = false;
+  function target(e){
+    var g = e.target.closest ? e.target.closest('.grp[data-mid]') : null;
+    return g;
+  }
+  box.addEventListener('touchstart', function(e){
+    var g = target(e); if(!g) return;
+    longPressed = false;
+    timer = setTimeout(function(){
+      longPressed = true;
+      openMsgSheet(Number(g.getAttribute('data-mid')), g.getAttribute('data-can-edit') === '1');
+    }, 450);
+  }, {passive:true});
+  box.addEventListener('touchend', function(){ if(timer) clearTimeout(timer); }, {passive:true});
+  box.addEventListener('touchmove', function(){ if(timer) clearTimeout(timer); }, {passive:true});
+  box.addEventListener('click', function(e){
+    if(longPressed){ longPressed = false; return; }
+    if(e.target.tagName === 'IMG' || e.target.tagName === 'AUDIO') return;
+    // Ignore clicks inside the inline edit box: its own Save/Cancel buttons
+    // would otherwise bubble up here and immediately reopen the sheet.
+    if(e.target.closest && e.target.closest('.edit-wrap')) return;
+    var g = target(e); if(!g) return;
+    openMsgSheet(Number(g.getAttribute('data-mid')), g.getAttribute('data-can-edit') === '1');
+  });
+})();
+
+$('msgDelete').onclick = function(){
+  var mid = sheetMid;
+  closeMsgSheet();
+  if(!mid) return;
+  if(!confirm('Delete this message? The other person will see that a message was deleted.')) return;
+  api('/private/delete', {method:'POST', body:J({messageId:mid})}).then(function(){
+    return loadThread(false);
+  }).then(loadConvs).catch(function(e){ toast(e.message || 'Could not delete.'); });
+};
+
+$('msgEdit').onclick = function(){
+  var mid = sheetMid;
+  closeMsgSheet();
+  if(!mid) return;
+  var grp = document.querySelector('.grp[data-mid="' + mid + '"]');
+  if(!grp) return;
+  var stack = grp.querySelector('.grp-stack');
+  var bub = stack.querySelector('.bub:not(.media)');
+  if(!bub) return toast('Only text messages can be edited.');
+  var original = bub.textContent;
+
+  var wrap = document.createElement('div');
+  wrap.className = 'edit-wrap';
+  var ta = document.createElement('textarea');
+  ta.value = original;
+  var acts = document.createElement('div');
+  acts.className = 'edit-actions';
+  var save = document.createElement('button');
+  save.className = 'fh-btn fh-btn-sm'; save.type = 'button'; save.textContent = 'Save';
+  var cancel = document.createElement('button');
+  cancel.className = 'fh-btn fh-btn-ghost fh-btn-sm'; cancel.type = 'button'; cancel.textContent = 'Cancel';
+  acts.appendChild(save); acts.appendChild(cancel);
+  wrap.appendChild(ta); wrap.appendChild(acts);
+  bub.style.display = 'none';
+  stack.insertBefore(wrap, bub.nextSibling);
+  ta.focus();
+
+  function restore(){ wrap.remove(); bub.style.display = ''; }
+  cancel.onclick = restore;
+  save.onclick = function(){
+    var text = ta.value.trim();
+    if(!text) return toast('Message cannot be empty.');
+    if(text === original) return restore();
+    save.disabled = true;
+    api('/private/edit', {method:'POST', body:J({messageId:mid, message:text})}).then(function(){
+      restore();
+      return loadThread(false);
+    }).then(loadConvs).catch(function(e){
+      save.disabled = false;
+      toast(e.message || 'Could not edit.');
+    });
+  };
+};
 
 /* ---------------- live updates ---------------- */
 function tick(){
@@ -629,6 +765,9 @@ function handleEvent(d){
   if(d.kind==='private.message'){
     loadConvs();
     if(selected&&d.payload&&d.payload.sender===selected) loadThread(true);
+  }else if(d.kind==='private.edited' || d.kind==='private.deleted'){
+    if(threadId && d.payload && d.payload.threadId===threadId) loadThread(false);
+    loadConvs();
   }else if(d.kind==='private.seen'){
     if(threadId&&d.payload&&d.payload.threadId===threadId) tick();
   }

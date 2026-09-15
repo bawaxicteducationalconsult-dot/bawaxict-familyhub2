@@ -38,6 +38,9 @@ MEDIA_RETENTION_SECONDS = 3 * 24 * 60 * 60
 # itself only keeps posts for PUBLIC_RETENTION (5h), so a 12h photo TTL both
 # outlives its post and caps storage growth on the Oracle VM.
 POST_MEDIA_RETENTION_SECONDS = 12 * 60 * 60
+# How long a sender may edit their own message. 15 minutes matches the
+# common messaging convention and is well inside PRIVATE_RETENTION.
+MESSAGE_EDIT_WINDOW_SECONDS = 15 * 60
 MAX_IMAGE_BYTES = 2 * 1024 * 1024
 MAX_VOICE_BYTES = 3 * 1024 * 1024
 MEDIA_DIR = BASE / "media"
@@ -405,6 +408,10 @@ def init_db():
             "ALTER TABLE users ADD COLUMN hide_photo INTEGER NOT NULL DEFAULT 0",
             # Photo posts: the feed composer can now attach one image.
             "ALTER TABLE community ADD COLUMN media_id INTEGER",
+            # Chat edit/delete. Soft delete keeps the row so receipts,
+            # ordering and the "deleted" tombstone survive.
+            "ALTER TABLE private_messages ADD COLUMN edited_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE private_messages ADD COLUMN deleted_at INTEGER NOT NULL DEFAULT 0",
             # Mockup rebuild: delivery/seen receipts for private chat. Additive only.
             "ALTER TABLE private_messages ADD COLUMN delivered_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE private_messages ADD COLUMN seen_at INTEGER NOT NULL DEFAULT 0",
@@ -1021,7 +1028,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if not t: con.close(); send_json(self,{'messages':[],'blocked':False,'thread':None}); return
                 blocked=con.execute('SELECT 1 FROM blocks WHERE (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)',(user['id'],other['id'],other['id'],user['id'])).fetchone()
                 if blocked: con.close(); send_json(self,{'messages':[],'blocked':True,'thread':t['id']}); return
-                rows=con.execute('SELECT pm.id,pm.sender_id,pm.recipient_id,pm.sender_snapshot,pm.message,pm.created_at,pm.delivered_at,pm.seen_at, m.id AS attachment_id,m.kind AS attachment_kind,m.mime_type AS attachment_mime,m.original_name AS attachment_name,m.size_bytes AS attachment_size,m.expires_at AS attachment_expires FROM private_messages pm LEFT JOIN media m ON m.attached_message_id=pm.id AND m.expires_at>? WHERE pm.thread_id=? ORDER BY pm.id ASC LIMIT 150',(int(time.time()),t['id'])).fetchall(); out=[]
+                rows=con.execute('SELECT pm.id,pm.sender_id,pm.recipient_id,pm.sender_snapshot,pm.message,pm.created_at,pm.delivered_at,pm.seen_at,pm.edited_at,pm.deleted_at, m.id AS attachment_id,m.kind AS attachment_kind,m.mime_type AS attachment_mime,m.original_name AS attachment_name,m.size_bytes AS attachment_size,m.expires_at AS attachment_expires FROM private_messages pm LEFT JOIN media m ON m.attached_message_id=pm.id AND m.expires_at>? WHERE pm.thread_id=? ORDER BY pm.id ASC LIMIT 150',(int(time.time()),t['id'])).fetchall(); out=[]
                 # Mockup rebuild: fetching a thread is proof of delivery to this device.
                 now_ts=int(time.time())
                 con.execute('UPDATE private_messages SET delivered_at=? WHERE thread_id=? AND recipient_id=? AND delivered_at=0',(now_ts,t['id'],user['id']))
@@ -1629,6 +1636,47 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 t=get_thread(con,user['id'],other['id'],True);now=int(time.time());cur=con.execute('INSERT INTO private_messages(thread_id,sender_id,recipient_id,sender_snapshot,message,created_at) VALUES(?,?,?,?,?,?)',(t['id'],user['id'],other['id'],user['username'],message,now)); msg_id=cur.lastrowid
                 if attachment_id: con.execute('UPDATE media SET attached_message_id=? WHERE id=?',(msg_id,attachment_id))
                 con.execute('UPDATE threads SET last_activity=? WHERE id=?',(now,t['id']));record_activity(con,user,now); emit_event(con,other['id'],'private.message',{'messageId':msg_id,'threadId':t['id'],'senderId':user['id'],'sender':user['username'],'message':message,'attachmentId':attachment_id or None,'createdAt':now}); emit_event(con,user['id'],'private.sent',{'messageId':msg_id,'threadId':t['id'],'recipientId':other['id'],'recipient':other['username'],'createdAt':now}); con.commit();con.close();send_json(self,{'ok':True,'threadId':t['id'],'messageId':msg_id,'attachmentId':attachment_id or None});return
+            if path in ('/api/private/edit','/api/private/delete'):
+                """Sender-only edit/delete for a private message.
+
+                Delete is a SOFT delete: the row stays so thread ordering,
+                delivered/seen receipts and the recipient's tombstone all keep
+                working. Any attachment is expired immediately so the file does
+                not outlive the message it belonged to."""
+                try: mid=int(data.get('messageId') or 0)
+                except Exception: mid=0
+                if not mid: con.close(); send_json(self,{'error':'Missing message id.'},400); return
+                m=con.execute('SELECT * FROM private_messages WHERE id=?',(mid,)).fetchone()
+                if not m: con.close(); send_json(self,{'error':'Message not found.'},404); return
+                if m['sender_id']!=user['id']:
+                    con.close(); send_json(self,{'error':'You can only change your own messages.'},403); return
+                if int(m['deleted_at'] or 0):
+                    con.close(); send_json(self,{'error':'That message was already deleted.'},409); return
+                now=int(time.time())
+
+                if path=='/api/private/delete':
+                    con.execute('UPDATE private_messages SET deleted_at=?, message=? WHERE id=?',(now,'',mid))
+                    con.execute('UPDATE media SET expires_at=? WHERE attached_message_id=?',(now-1,mid))
+                    emit_event(con,m['recipient_id'],'private.deleted',{'messageId':mid,'threadId':m['thread_id'],'at':now})
+                    emit_event(con,user['id'],'private.deleted',{'messageId':mid,'threadId':m['thread_id'],'at':now})
+                    con.commit(); con.close(); send_json(self,{'ok':True,'messageId':mid,'deletedAt':now}); return
+
+                if now-int(m['created_at']) > MESSAGE_EDIT_WINDOW_SECONDS:
+                    con.close(); send_json(self,{'error':'That message is too old to edit.',
+                                                 'windowSeconds':MESSAGE_EDIT_WINDOW_SECONDS},403); return
+                text=str(data.get('message','')).strip()
+                if not text or len(text)>MAX_TEXT:
+                    con.close(); send_json(self,{'error':'Message is empty or too long.'},400); return
+                hit=contains_abuse(text)
+                if hit:
+                    con.execute('INSERT INTO flags(scope,username,term,message,created_at) VALUES(?,?,?,?,?)',
+                                ('private-edit',user['username'],hit,text,now))
+                    con.commit(); con.close()
+                    send_json(self,{'error':'Edit blocked: it looks like it contains abusive or insulting language.'},400); return
+                con.execute('UPDATE private_messages SET message=?, edited_at=? WHERE id=?',(text,now,mid))
+                emit_event(con,m['recipient_id'],'private.edited',{'messageId':mid,'threadId':m['thread_id'],'message':text,'at':now})
+                emit_event(con,user['id'],'private.edited',{'messageId':mid,'threadId':m['thread_id'],'message':text,'at':now})
+                con.commit(); con.close(); send_json(self,{'ok':True,'messageId':mid,'message':text,'editedAt':now}); return
             if path=='/api/typing':
                 # Mockup rebuild: heartbeat that this user is typing in a thread.
                 # Cheap upsert; rows are read with a TTL and swept in cleanup().
