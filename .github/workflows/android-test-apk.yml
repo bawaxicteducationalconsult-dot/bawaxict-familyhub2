@@ -28,9 +28,10 @@ on:
         required: false
         default: false
   push:
-    paths:
-      - 'android-test/**'
-      - '.github/workflows/android-test-apk.yml'
+    # No path filter here: push filters of different types are AND-ed, so
+    # combining tags with paths would stop ordinary branch pushes from running.
+    # The relevance check for branch pushes lives in the job's `if` instead;
+    # tags (test-apk-*) always build and publish a Release.
   pull_request:
     paths:
       - 'android-test/**'
@@ -48,6 +49,13 @@ jobs:
     # contents: write is only needed by the optional "publish release" step.
     permissions:
       contents: write
+    # Skip pushes that cannot affect this build; tags always build.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'pull_request' ||
+      github.ref_type == 'tag' ||
+      contains(toJson(github.event.commits), 'android-test/') ||
+      contains(toJson(github.event.commits), 'android-test-apk.yml')
     defaults:
       run:
         working-directory: android-test
@@ -140,11 +148,11 @@ jobs:
       # Optional: a Release gives a direct download link that can be shared to
       # phones over WhatsApp/Bluetooth without logging into GitHub.
       - name: Publish to a GitHub Release
-        if: ${{ inputs.publish_release }}
+        if: ${{ inputs.publish_release || github.ref_type == 'tag' }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: test-apk-run-${{ github.run_number }}
-          name: FamilyHub Test APK (run ${{ github.run_number }})
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('test-apk-run-{0}', github.run_number) }}
+          name: FamilyHub Test APK (${{ github.ref_type == 'tag' && github.ref_name || format('run {0}', github.run_number) }})
           body: |
             Test build only — placeholder name and icon, not final branding.
 

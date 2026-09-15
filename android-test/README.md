@@ -49,6 +49,35 @@ Store listing and no release signing material anywhere in this project.
 It also runs automatically on every push/PR that touches `android-test/`, so the
 folder can't rot silently.
 
+### Tagged round → shareable release link
+
+A run publishes a **GitHub Release** (prerelease, with the `.apk` attached) when
+it is triggered by a tag, so each feedback round can get a permanent direct link:
+
+```bash
+# edit android-test/ (e.g. bump versionName), then:
+git tag test-apk-0.1.0-test
+git push origin arena/01a0a6c3-bawaxict-familyhub2 --tags
+```
+
+Release assets are downloadable without a GitHub login, which is what makes them
+easy to forward to phones over WhatsApp/Bluetooth.
+
+#### Round 1 (verified by CI)
+
+| | |
+|---|---|
+| File | `FamilyHubTest-0.1.0-test-debug.apk` |
+| Size | 1,997,200 bytes |
+| SHA-256 | `d3068c5de746632f37d77911b520d9a40c74314c53acc153e0b14a761175e5b9` |
+| Signing | Android Debug (`CN=Android Debug`) — `apksigner verify` passed |
+| Package | `net.bawaxict.familyhubtest`, versionCode 1, versionName `0.1.0-test` |
+| SDK | min 24 / target 35 / compile 35 |
+| Label | `FamilyHub Test` |
+
+Every successful run re-posts these facts (size, sha256, signing subject,
+badging) as a comment on its commit, so any round can be checked the same way.
+
 ### Locally
 
 ```bash
