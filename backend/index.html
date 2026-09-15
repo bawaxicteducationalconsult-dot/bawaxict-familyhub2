@@ -59,6 +59,11 @@ img{display:block;max-width:100%}
 .wifi-card{display:flex;align-items:center;gap:10px;background:var(--green-100);border:1px solid #CFEBDA;border-radius:var(--radius-md);padding:12px 13px;font-size:12px;font-weight:700;color:var(--green-900)}
 .wifi-dot{width:8px;height:8px;border-radius:50%;background:var(--green-500);flex-shrink:0;box-shadow:0 0 0 3px rgba(44,166,113,.25)}
 .sidebar-foot{display:flex;flex-direction:column;gap:6px}
+.hs-tag{display:inline-block;margin-left:auto;padding:1px 7px;border-radius:999px;
+  background:#FFF0E6;color:#E8690F;font-size:9.5px;font-weight:800;
+  letter-spacing:.2px;line-height:1.7;text-transform:uppercase;white-space:nowrap}
+.hs-note{display:block;font-size:10.5px;font-weight:600;color:var(--ink-500);
+  line-height:1.35;margin-top:3px}
 .hotspot-return{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:700;color:var(--orange-600);background:var(--orange-100)}
 .logout-link{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:700;color:#B4372A}
 .logout-link:hover{background:#FBEAE8}
@@ -194,7 +199,7 @@ img{display:block;max-width:100%}
       <a class="nav-item" href="institute.html"><span class="ic">▰</span>Learning</a>
       <a class="nav-item" href="skills.html"><span class="ic">▣</span>Opportunities</a>
       <a class="nav-item" href="games.html"><span class="ic">⌁</span>Entertainment</a>
-      <a class="nav-item" href="tickets.html"><span class="ic">◇</span>Internet Tickets</a>
+      <a class="nav-item" href="tickets.html" title="Buy WiFi access — only useful if you are connected to the BAWAXICT hotspot"><span class="ic">◇</span>Internet Tickets<span class="hs-tag">Hotspot</span></a>
       <a class="nav-item" href="report.html"><span class="ic">◉</span>Support</a>
     </nav>
 
@@ -202,7 +207,7 @@ img{display:block;max-width:100%}
 
     <div class="wifi-card"><span class="wifi-dot"></span>Connected · BAWAXICT WiFi</div>
     <div class="sidebar-foot">
-      <a class="hotspot-return" href="http://bawaxict.edu.net/status" title="Return to BAWAXICT WIFI hotspot page">↩ Back to Hotspot</a>
+      <a class="hotspot-return" href="http://bawaxict.edu.net/status" title="Opens the BAWAXICT WiFi portal — only reachable while connected to the hotspot">↩ Back to Hotspot<span class="hs-tag">Hotspot</span></a>
       <a class="logout-link" href="#logout" id="logoutBtn">↪ Logout</a>
     </div>
   </aside>
@@ -265,7 +270,7 @@ img{display:block;max-width:100%}
       <div class="rr-title">Connection Status</div>
       <div class="status-row"><span class="status-dot"></span>Status<b>Online</b></div>
       <div class="status-row"><span class="status-dot"></span>Access<b id="accessTypeLabel">Web Community</b></div>
-      <a class="hotspot-cta" href="http://bawaxict.edu.net/status">Back to Hotspot →</a>
+      <a class="hotspot-cta" href="http://bawaxict.edu.net/status" title="Only reachable while connected to the BAWAXICT hotspot">Back to Hotspot →<span class="hs-note">Only works on the BAWAXICT WiFi</span></a>
     </div>
     <div class="rr-card">
       <div class="rr-title">Invite &amp; Earn</div>
