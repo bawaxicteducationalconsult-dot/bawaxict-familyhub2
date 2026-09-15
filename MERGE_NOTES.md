@@ -929,3 +929,81 @@ No page locks zoom (`user-scalable=no` appears nowhere).
 - `tickets.html` is in the main nav but not redesigned; its layout is older
   than the pages around it (mobile text/tap sizing was fixed here).
 - Marketplace `do_GET`/`do_POST` bug — still deliberately untouched.
+
+---
+
+# DEVICE-TESTING FIXES (branch `device-fixes`, from `840a4fe`)
+
+## D1. Mobile navigation — full menu now reachable
+
+The bottom bar has five slots; the desktop rail has ten destinations. Measured
+on a 360x740 device: only Home, Chat, +, Market and Me existed, leaving
+**Discover, Services, Learning, Opportunities, Entertainment, Internet Tickets
+and Support unreachable on a phone entirely**.
+
+Replaced the Market slot with **More**, opening a bottom-sheet drawer with all
+ten rail destinations plus Invite & Earn and Rewards. Marketplace is still one
+tap, now inside the drawer.
+
+Drawer icons are inline SVG, not the rail's decorative glyphs: those
+characters have no glyph in common Android fonts and rendered as tofu on the
+test device — Entertainment literally displayed as `SOH`, Marketplace as a
+club suit.
+
+Verified: all 10 items present, every href resolves (no 404s), nothing under
+44x44, 0px overflow, drawer suppressed above 860px.
+
+## D2. Logout — was silently re-authenticating the same account
+
+`POST /api/logout` was fine; the client was the problem. It cleared the
+session cookie and three localStorage keys but **not `bawaxict_client_id`**.
+Bootstrap then falls back to `GET /device?client_id=...` and silently re-joins
+the same account.
+
+Measured before: tap Logout → still Amaka; the gate never appeared; typing a
+different name was impossible; reload → still Amaka. Logout was completely
+non-functional for its actual purpose (handing the phone over / switching
+ticket).
+
+Fixed by also releasing the device binding, confirming first (the account
+needs its recovery code to come back), and `location.replace()` to the join
+screen so Back cannot restore the authenticated view. `community-chat.html`
+was hardened too: it called `clientId()`, which *mints and stores* a new id as
+a side effect, so it could re-create a binding for a logged-out device.
+
+Measured after: A → logout → join as B → `/api/session` reports **B**. The
+old account is untouched and keeps its 21-day reservation.
+
+## D3. Clicking a name — already worked; no change needed
+
+`openAuthor()` is already wired to author names and avatars in the feed,
+comments and search, already calls `/profile/public` and
+`/profile/public/posts`, and the Follow button already posts to
+`/api/follow` / `/api/unfollow` (both exist server-side).
+
+Verified on device rather than assumed: tapping "Ngozi" opens the modal with
+avatar, online state, public details, recent posts and a Message button;
+Follow flips to "✓ Following" and `/profile/public` then reports
+`following: true`; tapping again unfollows and the server reports `false`.
+
+**Reporting this as working rather than inventing a change.** If the intent is
+a full-page profile rather than a modal, that is a design decision worth
+deciding explicitly — say the word and I'll build it.
+
+## D4. Profile picture beside the greeting
+
+Added a 52px (46px on mobile) avatar button next to "Good morning, [name]".
+Uses the `profilePhotoId` that `/api/profile` already returns — no new
+endpoint. That field is nulled server-side when the user has hidden their
+photo, so the privacy setting is respected automatically. Falls back to the
+initial-letter avatar used elsewhere, and tapping it opens the existing
+profile panel.
+
+Verified with a real uploaded PNG (renders the photo) and with no photo
+(renders the initial).
+
+## Regression
+
+All 12 pages at 360x740 **and** 1440x950: 0px overflow, no sideways drag, no
+JS errors. Marketplace still returns 502 from the known out-of-scope
+`do_GET`/`do_POST` bug.
