@@ -87,12 +87,21 @@ img{display:block;max-width:100%}
 
 .feed-scroll{padding:20px 24px 60px;display:flex;flex-direction:column;gap:18px}
 
-.hero{position:relative;overflow:hidden;border-radius:var(--radius-lg);padding:26px;color:#fff;background:linear-gradient(120deg,var(--green-900) 0%,var(--green-700) 55%,var(--green-600) 100%);display:flex;align-items:center;justify-content:space-between;gap:20px}
+.hero{position:relative;overflow:hidden;border-radius:var(--radius-lg);padding:26px;color:#fff;background:linear-gradient(120deg,var(--green-900) 0%,var(--green-700) 55%,var(--green-600) 100%);display:flex;align-items:center;justify-content:space-between;gap:16px}
 /* pointer-events:none is REQUIRED: this 220px decorative circle sits at the
    hero's top-right, directly over the Create button, and without it the
    pseudo-element swallows every click on that button. */
 .hero::after{content:"";position:absolute;right:-40px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.10),transparent 70%);pointer-events:none}
-.hero-text,.hero-cta{position:relative;z-index:1}
+.hero-text,.hero-cta,.hero-av{position:relative;z-index:1}
+/* Own avatar beside the greeting. Shows the uploaded profile photo when
+   there is one, otherwise the initial-letter fallback used elsewhere. */
+.hero-av{width:52px;height:52px;flex:none;border-radius:50%;border:2px solid rgba(255,255,255,.35);
+  background:rgba(255,255,255,.16);color:#fff;font-weight:800;font-size:20px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  cursor:pointer;padding:0;font-family:inherit;transition:.15s}
+.hero-av:hover{border-color:rgba(255,255,255,.7)}
+.hero-av img{width:100%;height:100%;object-fit:cover;display:block}
+.hero-text{min-width:0}
 .hero-text h1{margin:0 0 6px;font-size:21px;font-weight:800}
 .hero-text p{margin:0;font-size:13.5px;color:rgba(255,255,255,.82)}
 .online-pill{display:inline-flex;align-items:center;gap:7px;margin-top:12px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:6px 13px;font-size:12px;font-weight:700}
@@ -192,6 +201,7 @@ img{display:block;max-width:100%}
   .topbar{display:none}
   .feed-scroll{padding:14px 14px 90px}
   .hero{padding:20px 18px;flex-direction:column;align-items:flex-start;gap:16px}
+  .hero-av{width:46px;height:46px;font-size:18px}
   .post-act.report{margin-left:0}
 }
 .bottom-nav{display:none}
@@ -214,6 +224,39 @@ img{display:block;max-width:100%}
   .cs-badge{font-size:11px}
   .reward-sub,.cs-note{font-size:12px}
 }
+
+
+/* ---------- mobile "More" drawer ---------- */
+.more-veil{position:fixed;inset:0;background:rgba(18,26,22,.55);z-index:60;
+  display:none;align-items:flex-end;justify-content:center}
+.more-veil.show{display:flex}
+.more-sheet{width:100%;max-width:620px;background:var(--card);
+  border-radius:20px 20px 0 0;padding:10px 16px calc(18px + env(safe-area-inset-bottom));
+  max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  box-shadow:0 -12px 40px rgba(18,26,22,.3);animation:moreUp .22s ease}
+@keyframes moreUp{from{transform:translateY(14px);opacity:.6}to{transform:translateY(0);opacity:1}}
+.more-grab{width:38px;height:4px;border-radius:999px;background:var(--border);margin:2px auto 10px}
+.more-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.more-head b{font-size:15px;color:var(--green-900)}
+.more-x{border:0;background:var(--bg);width:34px;height:34px;border-radius:50%;
+  font-size:19px;line-height:1;color:var(--ink-500);cursor:pointer}
+.more-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.more-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+  min-height:82px;padding:12px 6px;border:1px solid var(--border);border-radius:14px;
+  background:var(--card);color:var(--ink-700);font-size:12px;font-weight:700;
+  text-align:center;line-height:1.25}
+.more-item:active{background:var(--bg)}
+.more-item.active{background:var(--green-900);color:#fff;border-color:var(--green-900)}
+.more-item .mi{display:flex;align-items:center;justify-content:center;height:22px}
+.more-item .mi svg{width:21px;height:21px}
+.more-foot{display:flex;gap:9px;margin-top:14px}
+.more-hotspot{flex:1;display:flex;align-items:center;justify-content:center;min-height:46px;
+  border:1px solid var(--border);border-radius:14px;font-size:12.5px;font-weight:800;
+  color:var(--orange-600);background:#FFF4EC}
+.more-logout{flex:1;min-height:46px;border:1px solid #F3C7C1;border-radius:14px;
+  background:#FBEAE8;color:#B4372A;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer}
+@media(min-width:861px){.more-veil{display:none !important}}
+@media(max-width:360px){.more-grid{grid-template-columns:repeat(2,1fr)}}
 
 /* overlays: gate / recovery / profile / report / author / notifications */
 #gateOverlay,#recoveryOverlay{position:fixed;inset:0;background:rgba(18,26,22,.62);display:none;place-items:center;padding:18px;z-index:200}
@@ -360,6 +403,7 @@ img{display:block;max-width:100%}
 
     <div class="feed-scroll">
       <div class="hero">
+        <button class="hero-av" id="heroAvatar" type="button" aria-label="Open your profile">B</button>
         <div class="hero-text">
           <h1><span id="greetingWord">Good morning</span>, <span id="welcomeName">Member</span></h1>
           <p>Here's what's happening around FamilyHub</p>
@@ -467,9 +511,43 @@ img{display:block;max-width:100%}
   <a class="bn-item" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Home</a>
   <a class="bn-item" href="private-chat.html" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Chat<span class="count-badge" id="chatBadgeBottom" style="display:none">0</span></a>
   <button class="bn-fab" id="fabBtn" type="button" aria-label="Create post"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></button>
-  <a class="bn-item" href="marketplace.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v10H3z"/></svg>Market</a>
+  <button class="bn-item" id="moreTabBtn" type="button" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>More</button>
   <button class="bn-item" id="meTabBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Me</button>
 </nav>
+
+
+<!-- ============ MOBILE "MORE" DRAWER ============
+     The bottom bar only has room for 5 slots, which left Discover,
+     Services, Learning, Opportunities, Entertainment, Internet Tickets and
+     Support unreachable on a phone. This drawer carries the full desktop
+     rail so nothing is mobile-only-inaccessible. -->
+<div class="more-veil" id="moreVeil" role="dialog" aria-modal="true" aria-label="All sections">
+  <div class="more-sheet" id="moreSheet">
+    <div class="more-grab" aria-hidden="true"></div>
+    <div class="more-head">
+      <b>All sections</b>
+      <button class="more-x" id="moreClose" type="button" aria-label="Close menu">&times;</button>
+    </div>
+    <div class="more-grid">
+      <a class="more-item" href="forum.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg></span>Home</a>
+      <a class="more-item" href="discover.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span>Discover</a>
+      <a class="more-item" href="private-chat.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>Chat</a>
+      <a class="more-item" href="marketplace.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v10H3z"/></svg></span>Marketplace</a>
+      <a class="more-item" href="services.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 01-5 5L4 17v3h3l5.7-5.7a4 4 0 015-5l2-2-3-3z"/></svg></span>Services</a>
+      <a class="more-item" href="institute.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l9-3 9 3-9 3z"/><path d="M6 10v6c0 1.7 2.7 3 6 3s6-1.3 6-3v-6"/></svg></span>Learning</a>
+      <a class="more-item" href="skills.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg></span>Opportunities</a>
+      <a class="more-item" href="games.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 11v3M5.5 12.5h3M15.5 12h.01M18 14h.01"/></svg></span>Entertainment</a>
+      <a class="more-item" href="tickets.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 002-2h14a2 2 0 002 2v2a2 2 0 000 4v2a2 2 0 00-2 2H5a2 2 0 00-2-2v-2a2 2 0 000-4z"/><path d="M14 6v12"/></svg></span>Internet Tickets</a>
+      <a class="more-item" href="report.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 17h.01M9.5 9.5a2.5 2.5 0 015 .5c0 1.7-2.5 2-2.5 4"/></svg></span>Support</a>
+      <a class="more-item" href="invite.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 12h18M12 8v13M12 8S10 3 7.5 4.5 9 8 12 8zM12 8s2-5 4.5-3.5S15 8 12 8z"/></svg></span>Invite &amp; Earn</a>
+      <a class="more-item" href="rewards.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.5 6 .9-4.3 4.3 1 6.1-5.3-2.9-5.3 2.9 1-6.1L3.4 9.4l6-.9z"/></svg></span>Rewards</a>
+    </div>
+    <div class="more-foot">
+      <a class="more-hotspot" href="http://bawaxict.edu.net/status">&#8617; Back to Hotspot</a>
+      <button class="more-logout" id="moreLogoutBtn" type="button">&#8618; Logout</button>
+    </div>
+  </div>
+</div>
 
 <!-- ============ JOIN GATE ============ -->
 <div id="gateOverlay">
@@ -723,6 +801,7 @@ function greeting(){
   return h < 12 ? 'Good morning' : (h < 17 ? 'Good afternoon' : 'Good evening');
 }
 function setIdentityDisplays(name){
+  try{ paintHeroAvatar(name, (window.__feedProfile||{}).currentPhotoId || null); }catch(e){}
   document.getElementById('greetingWord').textContent = greeting();
   ['welcomeName','composerName'].forEach(function(id){ var el = document.getElementById(id); if(el) el.textContent = name; });
   var initial = avatarInitial(name);
@@ -1595,7 +1674,7 @@ window.addEventListener('pageshow', function(){ if(joined){ startRealtime(); ref
    PROFILE PANEL (ported photo upload + fields)
    ================================================================ */
 (function profileModule(){
-  var triggers = [document.getElementById('profileTrigger'), document.getElementById('profileTriggerDesktop')].filter(Boolean),
+  var triggers = [document.getElementById('profileTrigger'), document.getElementById('profileTriggerDesktop'), document.getElementById('heroAvatar')].filter(Boolean),
       panel = document.getElementById('profilePanel'),
       photoWrap = document.getElementById('profilePhotoWrap'),
       nameEl = document.getElementById('profilePanelName'),
@@ -1649,6 +1728,7 @@ window.addEventListener('pageshow', function(){ if(joined){ startRealtime(); ref
       renderIdentityStatus();
       window.__feedProfile.currentPhotoId = data.profilePhotoId || null;
       setPhotoPreview(window.__feedProfile.currentPhotoId, data.sex || '', !!data.hidePhoto);
+      paintHeroAvatar(data.username, data.profilePhotoId);
     }).catch(function(){});
   };
 
@@ -1710,6 +1790,25 @@ window.addEventListener('pageshow', function(){ if(joined){ startRealtime(); ref
     }).finally(function(){ saveBtn.disabled = false; });
   });
 })();
+/* Own avatar beside the greeting. /api/profile already returns
+   profilePhotoId (and nulls it when the user hid their photo), so no new
+   endpoint is needed -- fall back to the initial-letter avatar used
+   everywhere else when there is no photo. */
+function paintHeroAvatar(username, photoId){
+  var el = document.getElementById('heroAvatar');
+  if(!el) return;
+  var name = username || CHAT_USER || '';
+  if(photoId){
+    var img = new Image();
+    img.onload = function(){ el.innerHTML = ''; el.appendChild(img); };
+    img.onerror = function(){ el.textContent = avatarInitial(name); };
+    img.src = API + '/media/' + photoId;
+    img.alt = name ? (name + "'s profile photo") : 'Your profile photo';
+  }else{
+    el.textContent = avatarInitial(name);
+  }
+}
+
 function loadProfile(){ if(window.loadFeedProfile) window.loadFeedProfile(); }
 
 /* ================================================================
@@ -1858,16 +1957,74 @@ document.getElementById('authorMessageBtn').addEventListener('click', function()
   if(authorCurrent) location.href = 'private-chat.html?with=' + encodeURIComponent(authorCurrent);
 });
 
+
+/* ---------- mobile "More" drawer ---------- */
+(function(){
+  var veil = document.getElementById('moreVeil'),
+      btn  = document.getElementById('moreTabBtn'),
+      closeBtn = document.getElementById('moreClose');
+  if(!veil || !btn) return;
+
+  var here = (location.pathname.split('/').pop() || 'forum.html').toLowerCase();
+  Array.prototype.forEach.call(veil.querySelectorAll('.more-item'), function(a){
+    var href = (a.getAttribute('href') || '').toLowerCase();
+    if(href === here || (here === '' && href === 'forum.html')) a.classList.add('active');
+  });
+
+  function open(){
+    veil.classList.add('show');
+    btn.setAttribute('aria-expanded','true');
+    document.body.style.overflow = 'hidden';   // don't scroll the feed behind
+  }
+  function close(){
+    veil.classList.remove('show');
+    btn.setAttribute('aria-expanded','false');
+    document.body.style.overflow = '';
+  }
+  btn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  veil.addEventListener('click', function(e){ if(e.target === veil) close(); });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && veil.classList.contains('show')) close();
+  });
+
+  /* Logout from the drawer reuses the same handler, so behaviour cannot
+     drift between the sidebar and the mobile menu. */
+  var ml = document.getElementById('moreLogoutBtn');
+  if(ml) ml.addEventListener('click', function(){
+    close();
+    document.getElementById('logoutBtn').click();
+  });
+})();
+
 /* ---------- logout ---------- */
 document.getElementById('logoutBtn').addEventListener('click', function(e){
   e.preventDefault();
+  /* Logout exists so a user can hand the phone over or switch ticket.
+     Clearing the cookie alone was not enough: bootstrap falls back to
+     GET /device?client_id=... and silently re-joins the SAME account, so
+     the user was instantly signed back in and could never enter another
+     name. The device binding must be released too.
+
+     bawaxict_client_id is regenerated on next load, so the next person
+     gets a clean device identity. The previous account is NOT deleted --
+     it keeps its 21-day reservation and is recoverable with its recovery
+     code, which is the documented contract. */
+  if(!confirm('Log out of ' + (CHAT_USER || 'this account') + '?\n\n'
+      + 'You will need this account\u2019s recovery code to use it again on this device.')) return;
+  var btn = this;
+  btn.style.pointerEvents = 'none';
+  btn.textContent = '\u21aa Logging out\u2026';
   apiFetch('/logout', { method: 'POST', json: {} }).catch(function(){}).finally(function(){
     try{
       localStorage.removeItem('bawaxict_username');
       localStorage.removeItem('familyhub_username');
       localStorage.removeItem('bawaxict_identity');
+      localStorage.removeItem('bawaxict_client_id');
+      sessionStorage.clear();
     }catch(err){}
-    location.reload();
+    /* replace() so Back cannot restore the authenticated view. */
+    location.replace('community-chat.html');
   });
 });
 
