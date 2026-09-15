@@ -1119,7 +1119,7 @@ a clean message could be edited into an abusive one after delivery.
 is public and deterministic. Answer opens the composer pre-filled so replies
 land in the normal feed.
 
-## R4. Badges — ⚠ THRESHOLDS NEED YOUR CONFIRMATION
+## R4. Badges — thresholds RESOLVED (see R4b below)
 
 Built exactly to the specified ladder. But you asked to be told if the numbers
 look mismatched once I saw the data, and they do:
@@ -1169,3 +1169,35 @@ need RouterOS API access and credentials — flagged, not built.
 `ADMIN_KEY_DEFAULT` is the **empty string**, so if `admin_key.txt` is missing
 the admin API accepts `key=""`. The server prints a warning on boot, but on the
 live VM this is worth confirming `admin_key.txt` exists.
+
+---
+
+## R4b. Badge thresholds — resolved
+
+Decision: keep `PUBLIC_RETENTION` at 5 hours (a deliberate storage decision)
+and lower the like requirements instead.
+
+| Tier | Contributions | Likes received | Active days |
+|---|---|---|---|
+| Novice | 0 | 0 | 0 |
+| Active | 10 | 0 | 3 |
+| Trusted | 50 | **5** (was 10) | 10 |
+| Pillar | 150 | **20** (was 50) | 30 |
+
+Reachability re-checked after the change, at 5 contributions per active day
+and roughly one like per post:
+
+| Tier | Time to reach | Binding gate |
+|---|---|---|
+| Active | 3 days | active days |
+| Trusted | 10 days | contributions |
+| Pillar | 30 days | contributions |
+
+**Likes are no longer the binding constraint at any tier.** Contributions and
+active days are, which is the intended design — active days is what prevents
+farming a tier in a single sitting. Under the old numbers the likes gate alone
+implied ~25 days for Pillar *on top of* the other requirements, on a feed where
+a post can only collect likes for 5 hours.
+
+Boundaries verified live: 50c/4l/10d = Active, 50c/5l/10d = Trusted,
+150c/19l/30d = Trusted, 150c/20l/30d = Pillar, 150c/20l/29d = Trusted.
