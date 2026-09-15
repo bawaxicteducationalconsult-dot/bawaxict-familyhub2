@@ -28,10 +28,14 @@ on:
         required: false
         default: false
   push:
-    # No path filter here: push filters of different types are AND-ed, so
-    # combining tags with paths would stop ordinary branch pushes from running.
-    # The relevance check for branch pushes lives in the job's `if` instead;
-    # tags (test-apk-*) always build and publish a Release.
+    # Branch pushes and tag pushes alike: a tag push carries the commit that
+    # bumped the round, which touches android-test/, so the paths filter matches
+    # it too — and github.ref_type == 'tag' below is what publishes the Release.
+    # (Filters of different types are AND-ed, which is why there is no `tags:`
+    # key here: tags+paths together would have disabled plain branch pushes.)
+    paths:
+      - 'android-test/**'
+      - '.github/workflows/android-test-apk.yml'
   pull_request:
     paths:
       - 'android-test/**'
@@ -49,13 +53,6 @@ jobs:
     # contents: write is only needed by the optional "publish release" step.
     permissions:
       contents: write
-    # Skip pushes that cannot affect this build; tags always build.
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'pull_request' ||
-      github.ref_type == 'tag' ||
-      contains(toJson(github.event.commits), 'android-test/') ||
-      contains(toJson(github.event.commits), 'android-test-apk.yml')
     defaults:
       run:
         working-directory: android-test
