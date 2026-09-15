@@ -777,7 +777,12 @@ function stopRec(){
    Uses the SAME /profile/public endpoint forum.html already uses.
    Previously private-chat.html never called it at all, so you could
    not open the profile of the person you were talking to.          */
-$('peerBtn').onclick=function(){ if(selected) openProfile(selected); };
+/* Tapping the thread header opens the peer's full profile page, matching
+   the feed. The in-page panel below is kept as a quick inline preview for
+   the Follow action without leaving the conversation. */
+$('peerBtn').onclick=function(){
+  if(selected) location.href='profile.html?user='+encodeURIComponent(selected);
+};
 
 function openProfile(username){
   $('ppName').textContent=username;
