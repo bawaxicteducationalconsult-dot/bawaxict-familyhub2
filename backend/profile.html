@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B2E23">
+<title>Profile | BAWAXICT FamilyHub</title>
+<!--
+  Full profile page. Replaces the author modal in forum.html so a profile
+  has its own shareable URL:  profile.html?user=<username>
+  (Cloudflare Pages clean URLs also make /profile?user=<username> work.)
+
+  Data comes from endpoints that already exist -- nothing new was added to
+  server.py for this page:
+    GET  /profile/public?username=        avatar, location, following flag
+    GET  /profile/public/posts?username=  recent posts, honours `hidden`
+    GET  /profile                         used only for "is this me"
+    GET  /members                         online state
+    POST /follow  |  /unfollow            follow button
+-->
+<link rel="stylesheet" href="css/familyhub-mockup.css">
+<script src="config.js"></script>
+<style>
+.layout{display:flex;min-height:100dvh}
+.content{flex:1;min-width:0}
+.topbar{height:var(--fh-header);background:var(--fh-card);border-bottom:1px solid var(--fh-border);
+  display:flex;align-items:center;gap:12px;padding:0 16px;position:sticky;top:0;z-index:20}
+.topbar h1{font-size:16px;font-weight:800;color:var(--fh-green-900);margin:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.back{width:44px;height:44px;flex:none;border-radius:50%;border:1px solid var(--fh-border);
+  background:var(--fh-card);color:var(--fh-ink);font-size:18px;cursor:pointer;
+  display:grid;place-items:center}
+.back:active{background:var(--fh-bg)}
+.wrap{max-width:720px;margin:0 auto;padding:0 0 48px}
+
+/* ---- cover + identity ---- */
+.cover{height:132px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,var(--fh-green-900),var(--fh-green-700) 60%,var(--fh-green-600))}
+.cover::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(circle at 1.5px 1.5px,rgba(255,255,255,.08) 1.5px,transparent 0);
+  background-size:26px 26px}
+.idbar{padding:0 18px;margin-top:-46px;position:relative}
+.pav{width:96px;height:96px;border-radius:50%;border:4px solid var(--fh-card);
+  background:var(--fh-green-900);color:#fff;font-weight:800;font-size:38px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  box-shadow:var(--fh-shadow)}
+.pav img{width:100%;height:100%;object-fit:cover;display:block}
+.pname{font-size:22px;font-weight:800;color:var(--fh-ink);margin:12px 0 4px;
+  letter-spacing:-.3px;overflow-wrap:anywhere}
+.pstate{display:inline-flex;align-items:center;gap:7px;font-size:13px;
+  font-weight:700;color:var(--fh-muted)}
+.pstate .fh-dot{width:8px;height:8px}
+.actions{display:flex;gap:9px;margin:16px 0 6px;flex-wrap:wrap}
+.actions .fh-btn{flex:1 1 auto;min-width:130px}
+.follow-on{background:var(--fh-card);color:var(--fh-green-900);border:1px solid var(--fh-border)}
+.follow-on:hover{background:var(--fh-bg)}
+
+/* ---- sections ---- */
+.sec{margin:16px 18px 0}
+.sec h2{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;
+  color:var(--fh-muted);margin:0 0 10px}
+.info{display:grid;gap:1px;background:var(--fh-border);border-radius:var(--fh-radius);
+  overflow:hidden;border:1px solid var(--fh-border)}
+.info div{display:flex;justify-content:space-between;gap:14px;
+  background:var(--fh-card);padding:13px 15px;font-size:13.5px}
+.info span{color:var(--fh-muted)}
+.info b{color:var(--fh-ink);font-weight:700;text-align:right;overflow-wrap:anywhere}
+.post{padding:15px 16px;margin-bottom:10px}
+.post-top{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.post-name{font-weight:700;font-size:13.5px}
+.post-when{font-size:11.5px;color:var(--fh-muted)}
+.post-body{font-size:14px;line-height:1.55;color:var(--fh-ink-700);
+  white-space:pre-wrap;overflow-wrap:anywhere}
+.post-foot{display:flex;gap:16px;margin-top:10px;font-size:12.5px;
+  color:var(--fh-muted);font-weight:600}
+.skel{height:14px;border-radius:7px;background:var(--fh-border);
+  animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.45}50%{opacity:.9}}
+
+@media(max-width:900px){
+  .wrap{padding-bottom:90px}
+  .fh-tabbar a{min-width:44px}
+  .cover{height:112px}
+  .pav{width:84px;height:84px;font-size:32px}
+  .idbar{margin-top:-40px;padding:0 14px}
+  .sec{margin:16px 14px 0}
+  .pname{font-size:20px}
+  .actions .fh-btn{min-width:0;flex:1 1 0}
+}
+</style>
+</head>
+<body class="has-tabbar">
+
+<div class="layout">
+  <aside class="fh-rail">
+    <a href="forum.html" class="fh-brand" style="padding:6px 10px 16px">
+      <span class="fh-brand-mark">B</span>
+      <span class="fh-brand-text"><b>BAWAXICT</b><span>FamilyHub</span></span>
+    </a>
+    <a class="fh-nav-item" href="forum.html"><span class="ic">⌂</span>Home</a>
+    <a class="fh-nav-item" href="discover.html"><span class="ic">⌕</span>Discover</a>
+    <a class="fh-nav-item" href="private-chat.html"><span class="ic">✉</span>Chat</a>
+    <a class="fh-nav-item" href="marketplace.html"><span class="ic">▤</span>Marketplace</a>
+    <a class="fh-nav-item" href="services.html"><span class="ic">⚒</span>Services</a>
+    <a class="fh-nav-item" href="institute.html"><span class="ic">▰</span>Learning</a>
+    <a class="fh-nav-item" href="skills.html"><span class="ic">▣</span>Opportunities</a>
+    <a class="fh-nav-item" href="games.html"><span class="ic">⌁</span>Entertainment</a>
+    <a class="fh-nav-item" href="tickets.html"><span class="ic">◇</span>Internet Tickets</a>
+    <a class="fh-nav-item" href="report.html"><span class="ic">◉</span>Support</a>
+    <div style="flex:1"></div>
+    <div class="fh-wifi"><span class="fh-dot" id="wifiDot"></span><span id="wifiTxt">Checking…</span></div>
+  </aside>
+
+  <div class="content">
+    <header class="topbar">
+      <button class="back" id="backBtn" type="button" aria-label="Go back">←</button>
+      <h1 id="topName">Profile</h1>
+    </header>
+
+    <div class="wrap">
+      <div class="cover"></div>
+
+      <div class="idbar">
+        <div class="pav" id="pav">?</div>
+        <h2 class="pname" id="pname">Loading…</h2>
+        <div class="pstate"><span class="fh-dot off" id="pdot"></span><span id="pstate">—</span></div>
+
+        <div class="actions" id="actions"></div>
+      </div>
+
+      <div class="sec">
+        <h2>About</h2>
+        <div class="info" id="info">
+          <div><span class="skel" style="width:70px"></span><span class="skel" style="width:110px"></span></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h2 id="postsLabel">Recent community posts</h2>
+        <div id="posts">
+          <div class="fh-card fh-card-p"><div class="skel" style="width:60%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<nav class="fh-tabbar">
+  <a href="forum.html"><span class="ic">⌂</span>Home</a>
+  <a href="discover.html"><span class="ic">⌕</span>Discover</a>
+  <a href="marketplace.html"><span class="fab">+</span></a>
+  <a href="private-chat.html"><span class="ic">✉</span>Chat</a>
+  <a href="profile.html" class="active"><span class="ic">☺</span>Me</a>
+</nav>
+
+<script>
+(function(){
+'use strict';
+var CFG=window.BAWAXICT_CONFIG||{};
+var API=(CFG.familyHubApiBase||'/api/familyhub/').replace(/\/$/,'');
+var $=function(i){return document.getElementById(i)};
+
+function api(p,o){
+  o=o||{};
+  return fetch(API+p,{method:o.method||'GET',credentials:'include',
+    headers:o.body?{'Content-Type':'application/json'}:undefined,body:o.body})
+    .then(function(r){return r.json().catch(function(){return{}}).then(function(d){
+      if(!r.ok){var e=new Error(d.error||'Request failed.');e.status=r.status;throw e}return d})});
+}
+function esc(s){return String(s==null?'':s).replace(/[&<>'"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}
+function initial(n){return ((n||'?').trim().charAt(0)||'?').toUpperCase()}
+function toast(t){var e=document.createElement('div');e.className='fh-toast';e.textContent=t;
+  document.body.appendChild(e);setTimeout(function(){e.remove()},3000)}
+function ago(ts){
+  var s=Math.max(1,Math.floor(Date.now()/1000-ts));
+  if(s<60)return s+'s ago'; if(s<3600)return Math.floor(s/60)+'m ago';
+  if(s<86400)return Math.floor(s/3600)+'h ago'; return Math.floor(s/86400)+'d ago';
+}
+
+/* Accept ?user= (canonical) and ?username= / ?u= so links written by hand,
+   or by older code, still resolve. */
+function wanted(){
+  var q=new URLSearchParams(location.search);
+  return (q.get('user')||q.get('username')||q.get('u')||'').trim();
+}
+
+var target=wanted(), me='', isMe=false, following=false;
+
+$('backBtn').addEventListener('click',function(){
+  if(history.length>1) history.back(); else location.href='forum.html';
+});
+
+/* Session first: it tells us who "me" is, and whether ?user= is my own
+   profile. With no ?user= at all this page IS my own profile, which is
+   what the mobile "Me" tab links to. */
+api('/profile').then(function(p){
+  me=p.username||'';
+  $('wifiDot').className='fh-dot';
+  $('wifiTxt').textContent='Connected · '+me;
+  if(!target) target=me;
+  isMe = !!target && target.toLowerCase()===me.toLowerCase();
+  load();
+}).catch(function(){
+  $('wifiDot').className='fh-dot off';
+  $('wifiTxt').textContent='Not signed in';
+  if(!target){
+    // Not signed in and no user asked for: nothing to show.
+    $('pname').textContent='Sign in to view your profile';
+    $('pstate').textContent='';
+    $('info').innerHTML='<div><span>Profile</span><b>Not signed in</b></div>';
+    $('posts').innerHTML='<div class="fh-empty"><b>Sign in required</b>'
+      +'<a class="fh-btn fh-btn-sm" style="margin-top:10px" href="community-chat.html">Join the community</a></div>';
+    $('actions').innerHTML='';
+    return;
+  }
+  load();   // public profile is still viewable for a shared link
+});
+
+function load(){
+  document.title=target+' | BAWAXICT FamilyHub';
+  $('topName').textContent=isMe?'Your profile':target;
+  $('pname').textContent=target;
+  $('pav').textContent=initial(target);
+  renderActions();
+  loadOnline();
+
+  api('/profile/public?username='+encodeURIComponent(target)).then(function(p){
+    $('pname').textContent=p.username||target;
+    if(p.profilePhotoId){
+      var img=new Image();
+      img.onload=function(){ $('pav').innerHTML=''; $('pav').appendChild(img); };
+      img.onerror=function(){ $('pav').textContent=initial(p.username||target); };
+      img.src=API+'/media/'+p.profilePhotoId;
+      img.alt=(p.username||target)+"'s profile photo";
+    }
+    following=!!p.following;
+    renderActions();
+
+    var rows='';
+    function row(k,v){ if(v) rows+='<div><span>'+k+'</span><b>'+esc(v)+'</b></div>'; }
+    row('Location',p.location); row('State',p.state);
+    row('Country',p.country);   row('Profile',p.sex);
+    if(!rows) rows='<div><span>Profile</span><b>'
+      +(isMe?'You have not added public details yet.':'No public details shared.')+'</b></div>';
+    $('info').innerHTML=rows;
+  }).catch(function(e){
+    if(e.status===404){
+      $('pname').textContent='Member not found';
+      $('pstate').textContent='';
+      $('info').innerHTML='<div><span>Profile</span><b>No member named “'+esc(target)+'”.</b></div>';
+      $('posts').innerHTML='<div class="fh-empty"><div class="ico">🔍</div><b>Nothing here</b>'
+        +'That profile does not exist or the name changed.</div>';
+      $('actions').innerHTML='';
+      return;
+    }
+    $('info').innerHTML='<div><span>Profile</span><b>Could not load.</b></div>';
+  });
+
+  api('/profile/public/posts?username='+encodeURIComponent(target)).then(function(r){
+    var box=$('posts');
+    if(r.hidden){
+      box.innerHTML='<div class="fh-empty"><div class="ico">🔒</div>'
+        +'<b>This member has hidden their profile</b>Their posts are private.</div>';
+      return;
+    }
+    var posts=r.posts||[];
+    $('postsLabel').textContent=posts.length
+      ? ('Recent community posts · '+posts.length) : 'Recent community posts';
+    if(!posts.length){
+      box.innerHTML='<div class="fh-empty"><div class="ico">💬</div><b>No posts yet</b>'
+        +(isMe?'Share something in the community feed.':'This member has not posted yet.')+'</div>';
+      return;
+    }
+    box.innerHTML=posts.slice(0,30).map(function(p){
+      return '<article class="fh-card post"><div class="post-top">'
+        +'<span class="fh-av fh-av-sm">'+esc(initial(p.username_snapshot||target))+'</span>'
+        +'<div><div class="post-name">'+esc(p.username_snapshot||target)+'</div>'
+        +'<div class="post-when">'+esc(ago(p.created_at))+'</div></div></div>'
+        +'<div class="post-body">'+esc(p.message)+'</div>'
+        +'<div class="post-foot"><span>♥ '+(p.like_count||0)+'</span>'
+        +'<span>💬 '+(p.comment_count||0)+'</span></div></article>';
+    }).join('');
+  }).catch(function(e){
+    $('posts').innerHTML= e.status===401
+      ? '<div class="fh-empty"><b>Sign in to see posts</b>'
+        +'<a class="fh-btn fh-btn-sm" style="margin-top:10px" href="community-chat.html">Join the community</a></div>'
+      : '<div class="fh-empty"><b>Could not load posts.</b></div>';
+  });
+}
+
+function loadOnline(){
+  api('/members').then(function(d){
+    var on=(d.members||[]).some(function(m){
+      return m.username && m.username.toLowerCase()===target.toLowerCase(); });
+    $('pdot').className='fh-dot'+(on?'':' off');
+    $('pstate').textContent=on?'Online now':'Offline';
+  }).catch(function(){ $('pstate').textContent='Community member'; });
+}
+
+function renderActions(){
+  var box=$('actions');
+  if(isMe){
+    box.innerHTML='<a class="fh-btn" href="forum.html#me">Edit profile</a>'
+      +'<a class="fh-btn fh-btn-ghost" href="invite.html">Invite friends</a>';
+    return;
+  }
+  box.innerHTML='<button class="fh-btn'+(following?' follow-on':'')+'" id="followBtn" type="button">'
+      +(following?'✓ Following':'+ Follow')+'</button>'
+    +'<a class="fh-btn fh-btn-ghost" href="private-chat.html?with='+encodeURIComponent(target)+'">💬 Message</a>';
+  var fb=$('followBtn');
+  if(fb) fb.addEventListener('click',function(){
+    fb.disabled=true;
+    api(following?'/unfollow':'/follow',{method:'POST',
+        body:JSON.stringify({other:target})}).then(function(r){
+      following=!!r.following;
+      renderActions();
+      toast(following?('You are now following '+target+'.'):('Unfollowed '+target+'.'));
+    }).catch(function(e){
+      toast(e.status===401 ? 'Sign in to follow members.' : (e.message||'Could not update.'));
+      fb.disabled=false;
+    });
+  });
+}
+})();
+</script>
+</body>
+</html>

@@ -329,7 +329,6 @@ img{display:block;max-width:100%}
 .mini-post:last-child{margin-bottom:0}
 .mini-post p{margin:0 0 6px;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
 .mini-post .meta{font-size:11px;color:var(--ink-500)}
-#authorPosts{max-height:260px;overflow:auto;margin-top:6px}
 .follow-btn{width:100%;margin-top:12px;padding:10px;border-radius:999px;background:var(--green-700);color:#fff;font-weight:700;font-size:13px}
 .follow-btn.following{background:#fff;color:var(--green-900);border:1px solid var(--border)}
 .trend-row{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:9px 10px;border-radius:10px;font-size:13px;font-weight:700;color:var(--green-900)}
@@ -650,21 +649,7 @@ img{display:block;max-width:100%}
   </div>
 </div>
 
-<!-- ============ AUTHOR PROFILE MODAL ============ -->
-<div class="modal-veil" id="authorModal">
-  <div class="modal-card">
-    <h3>Community member</h3>
-    <div class="author-top">
-      <span class="avatar" id="authorAvatar">?</span>
-      <div><div style="font-weight:800;font-size:16px" id="authorName">—</div><div style="font-size:12px;color:var(--ink-500)" id="authorStatus">—</div></div>
-    </div>
-    <div class="author-rows" id="authorRows"></div>
-    <button id="authorFollowBtn" type="button" class="follow-btn" style="display:none">Follow</button>
-    <div class="rlabel" id="authorPostsLabel">Recent community posts</div>
-    <div id="authorPosts"><div class="cs-note">Loading…</div></div>
-    <div class="modal-btns"><button class="cancel" id="authorClose" type="button">Close</button><button class="confirm" id="authorMessageBtn" type="button">💬 Message</button></div>
-  </div>
-</div>
+<!-- Author profile is now a full page: profile.html?user=<username> -->
 
 <!-- ============ REWARD MODAL ============ -->
 <div class="modal-veil" id="rewardModal">
@@ -1744,7 +1729,14 @@ window.addEventListener('pageshow', function(){ if(joined){ startRealtime(); ref
 
   triggers.forEach(function(t){ t.addEventListener('click', function(e){ e.stopPropagation(); if(panel.style.display === 'block') closePanel(); else openPanel(); }); });
   var meTab = document.getElementById('meTabBtn');
-  if(meTab) meTab.addEventListener('click', function(e){ e.stopPropagation(); if(panel.style.display === 'block') closePanel(); else openPanel(); });
+  /* "Me" now opens the full profile page (same page other members get),
+     so your own profile and everyone else's look and behave the same.
+     The floating settings panel is still reachable from the header
+     avatar, which is where editing lives. */
+  if(meTab) meTab.addEventListener('click', function(e){
+    e.stopPropagation();
+    location.href = 'profile.html';
+  });
   document.addEventListener('click', function(e){
     if(panel.style.display === 'block' && !panel.contains(e.target)) closePanel();
   });
@@ -1880,82 +1872,19 @@ renameConfirm.addEventListener('click', function(){
 /* ================================================================
    AUTHOR PROFILE (via /profile/public — real data, on demand)
    ================================================================ */
-var authorModal = document.getElementById('authorModal'), authorCurrent = '', authorFollowing = false;
-function paintFollowBtn(){
-  var btn = document.getElementById('authorFollowBtn');
-  btn.style.display = '';
-  btn.classList.toggle('following', authorFollowing);
-  btn.textContent = authorFollowing ? '✓ Following' : '+ Follow';
+/* Profiles now live at their own shareable URL instead of an overlay.
+   openAuthor() is kept as the single call site used by the feed, comments
+   and search, so every entry point navigates consistently.
+   Own name/avatar goes to the same page, which renders "your profile". */
+function profileUrl(username){
+  return 'profile.html?user=' + encodeURIComponent(username);
 }
 function openAuthor(username){
-  if(!username || username === CHAT_USER) return;
-  authorCurrent = username;
-  authorFollowing = false;
-  document.getElementById('authorFollowBtn').style.display = 'none';
-  document.getElementById('authorName').textContent = username;
-  document.getElementById('authorAvatar').textContent = avatarInitial(username);
-  var isOnline = onlineMembers.some(function(m){ return m.username === username; });
-  document.getElementById('authorStatus').textContent = isOnline ? '🟢 Online now' : '⚪ Offline';
-  document.getElementById('authorRows').innerHTML = '<div><span>Loading…</span></div>';
-  document.getElementById('authorPosts').innerHTML = '<div class="cs-note">Loading…</div>';
-  authorModal.classList.add('show');
-  apiFetch('/profile/public?username=' + encodeURIComponent(username)).then(function(p){
-    if(authorCurrent !== username) return;
-    if(p.profilePhotoId){
-      document.getElementById('authorAvatar').innerHTML = '<img src="' + API + '/media/' + p.profilePhotoId + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="">';
-    }
-    var rows = '';
-    if(p.location) rows += '<div><span>Location</span><b>' + esc(p.location) + '</b></div>';
-    if(p.sex) rows += '<div><span>Profile</span><b>' + esc(p.sex) + '</b></div>';
-    if(p.country) rows += '<div><span>Country</span><b>' + esc(p.country) + '</b></div>';
-    if(p.state) rows += '<div><span>State</span><b>' + esc(p.state) + '</b></div>';
-    if(!rows) rows = '<div><span>Profile</span><b>No public details shared.</b></div>';
-    document.getElementById('authorRows').innerHTML = rows;
-    authorFollowing = !!p.following;
-    paintFollowBtn();
-  }).catch(function(){
-    if(authorCurrent !== username) return;
-    document.getElementById('authorRows').innerHTML = '<div><span>Profile</span><b>Could not load public profile.</b></div>';
-  });
-  apiFetch('/profile/public/posts?username=' + encodeURIComponent(username)).then(function(r){
-    if(authorCurrent !== username) return;
-    var box = document.getElementById('authorPosts');
-    box.innerHTML = '';
-    if(r.hidden){
-      box.innerHTML = '<div class="cs-note">🔒 This member has hidden their profile.</div>';
-      return;
-    }
-    var posts = r.posts || [];
-    if(!posts.length){
-      box.innerHTML = '<div class="cs-note">No community posts yet.</div>';
-      return;
-    }
-    posts.slice(0, 20).forEach(function(p){
-      box.appendChild(miniPost(p.username_snapshot || username, p, null));
-    });
-  }).catch(function(){
-    if(authorCurrent !== username) return;
-    document.getElementById('authorPosts').innerHTML = '<div class="cs-note">Could not load posts.</div>';
-  });
+  if(!username) return;
+  location.href = profileUrl(username);
 }
-document.getElementById('authorFollowBtn').addEventListener('click', function(){
-  if(!authorCurrent) return;
-  var btn = this;
-  btn.disabled = true;
-  apiFetch(authorFollowing ? '/unfollow' : '/follow', { method: 'POST', json: { other: authorCurrent } }).then(function(r){
-    authorFollowing = !!r.following;
-    paintFollowBtn();
-    toast(authorFollowing ? ('You are now following ' + authorCurrent + '.') : ('Unfollowed ' + authorCurrent + '.'));
-    tabSig.following = '';
-    if(currentTab === 'following') refreshFeed();
-  }).catch(function(e){
-    toast(e.message || 'Unable to update follow.');
-  }).finally(function(){ btn.disabled = false; });
-});
-document.getElementById('authorClose').addEventListener('click', function(){ authorModal.classList.remove('show'); });
-document.getElementById('authorMessageBtn').addEventListener('click', function(){
-  if(authorCurrent) location.href = 'private-chat.html?with=' + encodeURIComponent(authorCurrent);
-});
+
+
 
 
 /* ---------- mobile "More" drawer ---------- */

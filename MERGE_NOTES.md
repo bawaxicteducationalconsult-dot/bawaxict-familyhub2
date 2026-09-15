@@ -1007,3 +1007,75 @@ Verified with a real uploaded PNG (renders the photo) and with no photo
 All 12 pages at 360x740 **and** 1440x950: 0px overflow, no sideways drag, no
 JS errors. Marketplace still returns 502 from the known out-of-scope
 `do_GET`/`do_POST` bug.
+
+---
+
+# FULL PROFILE PAGE (branch `profile-page`, from `device-fixes`)
+
+Replaces the author modal with a real page: **`profile.html?user=<username>`**,
+plus a **`/u/<username>`** short form on both deployments.
+
+## Why a query parameter rather than a path segment
+
+Cloudflare Pages serves static files, so a true `/u/<name>` route would need
+either a Function or a Worker route, and `_routes.json` deliberately scopes the
+Worker to `/familyhub/*` and `/api/familyhub/*`. `profile.html?user=` needs
+neither, works identically on Pages and on the Oracle origin, and matches the
+flat-file convention every other page already uses.
+
+`/u/<name>` is layered on top as a 302 for nicer sharing — a Pages `_redirects`
+placeholder rule and an equivalent handler in `server.py`. The query form stays
+canonical so nothing breaks if the short link is ever dropped.
+
+## Data
+
+No new endpoints. The page uses what already existed:
+
+| Endpoint | Used for |
+|---|---|
+| `GET /profile/public?username=` | avatar, location, following flag |
+| `GET /profile/public/posts?username=` | recent posts; honours `hidden` |
+| `GET /profile` | identifies "me" |
+| `GET /members` | live online state |
+| `POST /follow` / `/unfollow` | follow button |
+
+## States handled
+
+- **Own profile** — `profile.html` with no `?user` shows you, with *Edit
+  profile* / *Invite friends* instead of Follow / Message.
+- **Unknown user** — proper "Member not found" state, not a stuck spinner.
+- **Hidden profile** — locked state, honouring the server's `hidden` flag.
+- **Signed out** — a shared public profile still renders; the posts section
+  prompts to join, because `/profile/public/posts` requires a session.
+- `?user=`, `?username=` and `?u=` all accepted so hand-written links resolve.
+
+## Entry points rewired
+
+`openAuthor()` now navigates instead of opening an overlay, and remains the
+single call site for feed posts, post avatars, comment authors and search
+results. Also rewired: the mobile **Me** tab (previously a small floating
+settings panel) and the **private-chat thread header**. Editing still lives in
+the header-avatar panel, which the profile page links to.
+
+The modal was **removed**, not left dormant — markup, styles and ~90 lines of
+JS. Leaving a second, diverging implementation of the same feature in place is
+how the two drift apart.
+
+## Verification
+
+360x740 (touch, Android UA) and 1440x950:
+
+- clicking a name in the feed navigates to a real URL, not an overlay
+- follow → `✓ Following` and `/profile/public` reports `following: true`;
+  unfollow reverses both
+- direct URL loads cold; `/u/<name>` 302s correctly on Pages *and* origin
+- Me tab → own profile; chat header → peer profile; Message → the thread
+- all 14 page states: 0px overflow, no sideways drag, no JS errors, no
+  sub-44px tap targets
+
+## Note on the backend copies
+
+`backend/forum.html` and `backend/private-chat.html` had to be re-synced: an
+earlier commit in this branch staged a stale `backend/forum.html` still
+containing the removed modal, which would have left LAN hotspot users on the
+old overlay while Pages users got the new page. Both now match `site/` exactly.

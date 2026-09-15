@@ -633,7 +633,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
         page_map={'/discover.html':'discover.html','/services.html':'services.html',
                   '/community-chat.html':'community-chat.html','/login.html':'login.html',
                   '/status.html':'status.html','/marketplace.html':'marketplace.html',
-                  '/index.html':'index.html','/tickets.html':'tickets.html','/games.html':'games.html','/invite.html':'invite.html'}
+                  '/index.html':'index.html','/tickets.html':'tickets.html','/games.html':'games.html','/invite.html':'invite.html',
+                  '/profile.html':'profile.html','/profile':'profile.html'}
+        # /u/<username> short profile links, matching the Pages _redirects
+        # rule so a shared link resolves on the hotspot origin too.
+        if path.startswith('/u/') and len(path) > 3 and '/' not in path[3:]:
+            fp = BASE/'profile.html'
+            if fp.exists():
+                self.send_response(302)
+                self.send_header('Location','/profile.html?user='+urllib.parse.quote(path[3:]))
+                self.send_header('Cache-Control','no-store'); self.end_headers(); return
         if path in page_map:
             fp=BASE/page_map[path]
             if fp.exists():
