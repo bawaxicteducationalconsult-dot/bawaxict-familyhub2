@@ -142,6 +142,32 @@ handled:
 | TLS problems | never proceed past an SSL error; explain instead |
 | Voucher/ticket downloads | handed to the platform via ACTION_VIEW |
 
+### Round-1 load target (decided 2026-09-15)
+
+`https://bawaxict-familyhub2.pages.dev/forum` — the Pages origin the MikroTik
+portal redirects authenticated hotspot users to. Chosen over the captive portal
+(`http://bawaxict.edu.net/status`) and the on-LAN server
+(`http://chat.bawaxict.edu.net:8080/`) because those two only resolve while
+joined to the BAWAXICT WiFi, which would make the app look broken to anyone
+testing off-site or stepping away from the hotspot.
+
+One build then covers both origin states:
+
+- **On the hotspot WiFi** — the session is a hotspot session: same origin the
+  portal hands off to, walled-garden reachable, and the plain-HTTP LAN links
+  ("Back to Hotspot", the on-LAN server) resolve through the cleartext allowlist.
+- **On mobile data** — the same Pages origin still loads and signs in normally;
+  only the hotspot-only links fail, and they fail with the "can only be reached
+  while connected to the BAWAXICT hotspot WiFi" explanation rather than a
+  generic error (`Origins.isHotspotOnly`).
+
+The other variants remain one property away, for anyone who wants them:
+
+```bash
+./gradlew assembleDebug -PstartUrl="http://bawaxict.edu.net/status"
+./gradlew assembleDebug -PstartUrl="http://chat.bawaxict.edu.net:8080/"
+```
+
 ### Known router-side prerequisite
 
 `site/mikrotik/BAWAXICT_MikroTik_FamilyHub_PRODUCTION_V2_FIXED.rsc` still has no
