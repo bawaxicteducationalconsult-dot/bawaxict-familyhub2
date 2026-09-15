@@ -21,6 +21,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.webkit.CookieManager;
+import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
@@ -278,7 +279,8 @@ public class MainActivity extends Activity {
         }
 
         @Override
-        public void onGeolocationPermissionsShowPrompt(String origin, GeolocationCallback callback) {
+        public void onGeolocationPermissionsShowPrompt(String origin,
+                                                         GeolocationPermissions.Callback callback) {
             // site/_headers sets Permissions-Policy geolocation=(), so the site
             // never asks. Deny rather than prompt.
             callback.invoke(origin, false, false);

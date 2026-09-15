@@ -106,7 +106,7 @@ jobs:
             # The failure message, with stacktrace noise stripped.
             awk '/FAILURE: Build failed/,0' "$LOG" 2>/dev/null | grep -vE '^[[:space:]]+at ' | head -n 45
             echo '--- error lines ---'
-            grep -nE '\.java:[0-9]+:|\.xml:[0-9]+:|error:|Execution failed for task|Caused by:|AAPT:|resource' "$LOG" 2>/dev/null | head -n 40
+            grep -nE -A 3 '\.java:[0-9]+:|\.xml:[0-9]+:|error:|Execution failed for task|Caused by:|AAPT:|resource' "$LOG" 2>/dev/null | head -n 60
             echo '```'
           } > /tmp/failure-report.md
           jq -Rs '{body: .}' /tmp/failure-report.md > /tmp/failure-report.json
