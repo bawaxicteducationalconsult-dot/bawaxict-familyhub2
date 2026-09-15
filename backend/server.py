@@ -457,10 +457,16 @@ def init_db():
 # ---------------------------------------------------------------------------
 BADGE_TIERS = [
     # (tier, key, label, colour, min_contributions, min_likes_received, min_active_days)
+    #
+    # Like requirements are deliberately low relative to the contribution
+    # counts. A public post is only visible -- and therefore only likeable --
+    # for PUBLIC_RETENTION (5 hours) before cleanup() removes it, so likes
+    # accrue far more slowly than posts do. Raising PUBLIC_RETENTION was
+    # rejected: the short window is an intentional storage decision.
     (0, 'novice',   'Novice',   '#98A2B3',   0,  0,  0),
     (1, 'active',   'Active',   '#CD7F32',  10,  0,  3),
-    (2, 'trusted',  'Trusted',  '#9CA3AF',  50, 10, 10),
-    (3, 'pillar',   'Pillar',   '#D4A017', 150, 50, 30),
+    (2, 'trusted',  'Trusted',  '#9CA3AF',  50,  5, 10),
+    (3, 'pillar',   'Pillar',   '#D4A017', 150, 20, 30),
 ]
 
 def badge_for(contributions, likes_received, active_days):
