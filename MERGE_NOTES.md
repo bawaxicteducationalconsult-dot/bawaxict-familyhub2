@@ -1201,3 +1201,57 @@ a post can only collect likes for 5 hours.
 
 Boundaries verified live: 50c/4l/10d = Active, 50c/5l/10d = Trusted,
 150c/19l/30d = Trusted, 150c/20l/30d = Pillar, 150c/20l/29d = Trusted.
+
+---
+
+# ROUND 6 (branch `hotspot-labels-badges`, from `70b7672`)
+
+## H1. Hotspot-only labelling — chose labels, not conditional hiding
+
+**Why not hide.** The brief suggested hiding based on `hotspotUser` from
+`/api/session`. I checked whether that flag can be trusted and it cannot:
+`hotspot_user` is only ever set by `POST /api/hotspot/verify`, which requires
+an `X-Hotspot-Secret` header matched against `HOTSPOT_SHARED_SECRET`. That env
+var defaults to `''`, the endpoint 403s when it is unset, and **no page in
+`site/` calls it**. So `hotspotUser` is `false` for every user today —
+including genuine hotspot users.
+
+Hiding on that flag would therefore have hidden *Internet Tickets* from exactly
+the people who need it, and the breakage would only surface when someone on the
+WiFi tried to buy a ticket. Labels are correct for every visitor regardless of
+how they arrived and need no router-side plumbing.
+
+Applied to: forum sidebar + mobile More drawer, index, discover, services,
+invite, profile (Internet Tickets), all *Back to Hotspot* links, and a banner
+on `tickets.html` itself — that page is linkable directly, so the explanation
+has to live there too.
+
+**Follow-up if wanted:** once `HOTSPOT_SHARED_SECRET` is configured and the
+router calls `/api/hotspot/verify`, switching to conditional display is small.
+The labels stay correct either way.
+
+## H2. Badges next to usernames
+
+Now shown in feed posts, comments, chat conversation list, chat thread header
+and the members list — previously profile-only.
+
+`badge_mini()` reads the denormalized `users.badge_tier` that `bump_stat()`
+already maintains, so each badge is one correlated subquery rather than a
+threshold recomputation.
+
+**Novice is intentionally not rendered.** It is the default for every new
+member; a chip on every row would be noise and would defeat the badge as a
+signal. The API still returns it, so this is a client-side policy that can be
+changed without touching the backend.
+
+### Two bugs found while doing this
+
+1. **Badge rendered as a full-width bar.** `.post-who` and `.comment-body` are
+   column flex containers, so a flex child stretches to the full row. Fixed
+   with a `.who-line` row wrapper and `max-width:max-content`. Verified
+   44–59px wide, not the full row.
+2. **Pre-existing: chat list online dot was random.** `/api/conversations`
+   compared the *thread* id against a set of *user* ids
+   (`r['id'] in online_ids`). Now uses `other_id`. Also hoisted the
+   `online_for()` call out of the per-conversation loop, where it was being
+   recomputed for every row.
