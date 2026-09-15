@@ -98,11 +98,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          LOG="$GITHUB_WORKSPACE/android-test/build-output.log"
           {
-            echo "Android test APK build failed — run ${{ github.run_id }} / attempt ${{ github.run_attempt }}"
+            echo "Android test APK build failed - run ${{ github.run_id }} attempt ${{ github.run_attempt }}"
             echo
             echo '```'
-            tail -n 90 "$GITHUB_WORKSPACE/android-test/build-output.log" 2>/dev/null || echo "(no gradle log captured)"
+            # The failure message, with stacktrace noise stripped.
+            awk '/FAILURE: Build failed/,0' "$LOG" 2>/dev/null | grep -vE '^[[:space:]]+at ' | head -n 45
+            echo '--- error lines ---'
+            grep -nE '\.java:[0-9]+:|\.xml:[0-9]+:|error:|Execution failed for task|Caused by:|AAPT:|resource' "$LOG" 2>/dev/null | head -n 40
             echo '```'
           } > /tmp/failure-report.md
           jq -Rs '{body: .}' /tmp/failure-report.md > /tmp/failure-report.json
