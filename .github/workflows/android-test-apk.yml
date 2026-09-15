@@ -155,3 +155,28 @@ jobs:
           files: ${{ env.APK_PATH }}
           draft: false
           prerelease: true
+
+      # Mirror of the failure report: on success, post the facts a sideloader
+      # cares about (file, sha256, signing subject, package/label/SDK levels) as
+      # a commit comment, so they are readable through the API from anywhere.
+      - name: Report build result on the commit
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BT="${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools/35.0.0"
+          APK="$GITHUB_WORKSPACE/$APK_PATH"
+          {
+            echo "Android test APK built - run ${{ github.run_id }}"
+            echo
+            echo '```'
+            ls -l "$APK"
+            sha256sum "$APK"
+            "$BT/apksigner" verify --print-certs "$APK" 2>&1 | head -n 8
+            "$BT/aapt2" dump badging "$APK" 2>/dev/null \
+              | grep -E '^package:|application-label:|sdkVersion:|targetSdkVersion:|launchable-activity:' || true
+            echo '```'
+          } > /tmp/success-report.md
+          jq -Rs '{body: .}' /tmp/success-report.md > /tmp/success-report.json
+          gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/comments" \
+            -X POST --input /tmp/success-report.json || true
