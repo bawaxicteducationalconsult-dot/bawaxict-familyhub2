@@ -258,6 +258,12 @@ img{display:block;max-width:100%}
 @media(min-width:861px){.more-veil{display:none !important}}
 @media(max-width:360px){.more-grid{grid-template-columns:repeat(2,1fr)}}
 
+/* daily pulse */
+.pulse-q{font-size:14px;line-height:1.5;color:var(--ink-900);font-weight:600;margin:4px 0 12px}
+.pulse-btn{width:100%;min-height:44px;border:0;border-radius:12px;background:var(--green-700);
+  color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
+.pulse-btn:hover{background:var(--green-900)}
+
 /* composer photo preview */
 .photo-preview{position:relative;margin:10px 0;border-radius:14px;overflow:hidden;
   border:1px solid var(--border);background:var(--bg);max-width:320px}
@@ -509,10 +515,11 @@ img{display:block;max-width:100%}
       <div class="cs-note">Ranked live from real #hashtags in community posts. Tap a topic to filter the feed.</div>
     </div>
 
-    <div class="rr-card cs-card" id="pulseCard">
-      <div class="rr-title">💓 Daily Pulse <span class="cs-badge">Coming Soon</span></div>
-      <div class="cs-item"><b>Today's discussion prompt</b><span>A fresh community question every day.</span></div>
-      <div class="cs-note">Daily discussion prompts are on the way. Join the conversation in the feed for now.</div>
+    <div class="rr-card" id="pulseCard">
+      <div class="rr-title">💓 Daily Pulse</div>
+      <div class="pulse-q" id="pulseQuestion">Loading today's question…</div>
+      <button class="pulse-btn" id="pulseAnswerBtn" type="button">Answer in the feed →</button>
+      <div class="cs-note" id="pulseDate"></div>
     </div>
 
     <div class="rr-card">
@@ -955,6 +962,7 @@ gateRecovery.addEventListener('keydown', function(e){ if(e.key === 'Enter') gate
 
 function completeJoin(){
   joined = true;
+  loadDailyPulse();
   loadProfile();
   refreshAll();
   if(!onlineTimer) onlineTimer = setInterval(refreshOnline, 5000);
@@ -1469,7 +1477,33 @@ function setTab(tab){
 document.getElementById('tabForYou').addEventListener('click', function(){ setTab('foryou'); });
 document.getElementById('tabFollowing').addEventListener('click', function(){ setTab('following'); });
 document.getElementById('tabTrending').addEventListener('click', function(){ setTab('trending'); });
-document.getElementById('pulseCard').addEventListener('click', function(){ comingSoon('Daily Pulse'); });
+/* ---------- Daily Pulse ----------
+   One deterministic prompt per day from /api/pulse. Tapping "Answer"
+   opens the composer pre-filled so the reply lands in the normal feed
+   rather than needing its own storage. */
+var pulseToday = null;
+function loadDailyPulse(){
+  apiFetch('/pulse').then(function(p){
+    if(!p || !p.prompt) return;
+    pulseToday = p;
+    document.getElementById('pulseQuestion').textContent = p.prompt;
+    var d = document.getElementById('pulseDate');
+    if(d) d.textContent = 'A fresh community question every day.';
+  }).catch(function(){
+    document.getElementById('pulseQuestion').textContent =
+      'Today\u2019s question could not be loaded.';
+  });
+}
+document.getElementById('pulseAnswerBtn').addEventListener('click', function(e){
+  e.stopPropagation();
+  if(!joined){ showGate(); return; }
+  if(!pulseToday) return;
+  openComposer();
+  var ta = document.getElementById('composerText');
+  if(!ta.value.trim()) ta.value = '💓 ' + pulseToday.prompt + '\n\n';
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+});
 
 /* ---------- trending topics: ranked live from real #hashtags in the feed ---------- */
 function extractTags(text){
