@@ -1,0 +1,16 @@
+# Gradle / Android build output — never commit these.
+.gradle/
+build/
+app/build/
+local.properties
+
+# Signing material. This project builds with the auto-generated debug key by
+# default; if an internal-test keystore is ever added it must not be committed.
+*.jks
+*.keystore
+keystore.properties
+
+# IDE
+.idea/
+*.iml
+.DS_Store

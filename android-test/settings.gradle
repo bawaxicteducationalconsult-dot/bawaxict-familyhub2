@@ -1,0 +1,21 @@
+// FamilyHub Test — Android WebView shell (test build only).
+// Standalone Gradle project. It does not reference, include or modify
+// anything in site/, backend/ or functions/.
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'FamilyHubTest'
+include ':app'

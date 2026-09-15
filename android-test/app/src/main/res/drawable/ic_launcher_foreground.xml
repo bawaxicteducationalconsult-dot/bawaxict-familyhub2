@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLACEHOLDER launcher icon for the test build only: a WiFi glyph on the site's
+  dark green. It is not final branding and must be replaced for the official
+  launch build.
+
+  Adaptive-icon foreground: 108x108dp canvas, artwork kept inside the inner
+  72dp so no launcher mask clips it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group>
+        <path
+            android:pathData="M28,48 A36,36 0 0 1 80,48"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="6"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000" />
+        <path
+            android:pathData="M36,57 A25,25 0 0 1 72,57"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="6"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000" />
+        <path
+            android:pathData="M44,66 A14,14 0 0 1 64,66"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="6"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000" />
+        <path
+            android:pathData="M54,72 m-4.5,0 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0"
+            android:fillColor="#FFFFFF" />
+    </group>
+</vector>

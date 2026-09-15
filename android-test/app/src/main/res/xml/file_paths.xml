@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Writable location for the temporary file handed to the camera app when a
+     page uses <input type="file" accept="image/*" capture="environment">. -->
+<paths>
+    <cache-path name="uploads" path="uploads/" />
+</paths>

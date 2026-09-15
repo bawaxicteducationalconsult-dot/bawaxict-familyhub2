@@ -1,0 +1,134 @@
+# Builds the FamilyHub Test APK (WebView shell around the existing web app).
+#
+# This exists because the APK cannot be produced from the checked-out workspace
+# alone: the Android SDK, the Gradle distribution and the Android Gradle Plugin
+# are only distributed from dl.google.com / services.gradle.org / repo1.maven.org,
+# and a GitHub runner is the place those are reachable.
+#
+# Output is a plain debug-signed .apk (assembleDebug) — NOT an .aab, and no Play
+# Store signing or release keys are involved. Download it from the run's
+# Artifacts, or tick "publish release" to get a direct shareable link.
+
+name: Android test APK (FamilyHub Test)
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_url:
+        description: 'URL the WebView loads'
+        required: false
+        default: 'https://bawaxict-familyhub2.pages.dev/forum'
+      app_name:
+        description: 'Launcher label (test branding only)'
+        required: false
+        default: 'FamilyHub Test'
+      publish_release:
+        description: 'Also publish the APK to a GitHub Release (direct share link)'
+        type: boolean
+        required: false
+        default: false
+  push:
+    paths:
+      - 'android-test/**'
+      - '.github/workflows/android-test-apk.yml'
+  pull_request:
+    paths:
+      - 'android-test/**'
+      - '.github/workflows/android-test-apk.yml'
+
+# One build at a time; a new push supersedes an in-flight one.
+concurrency:
+  group: android-test-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Assemble debug APK
+    runs-on: ubuntu-latest
+    # contents: write is only needed by the optional "publish release" step.
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: android-test
+
+    env:
+      # On push/PR there are no inputs, so these fall back to the same defaults
+      # the Gradle build uses on its own.
+      START_URL: ${{ inputs.start_url || 'https://bawaxict-familyhub2.pages.dev/forum' }}
+      APP_NAME: ${{ inputs.app_name || 'FamilyHub Test' }}
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # The runner image ships an Android SDK, but not necessarily the exact
+      # platform/build-tools this project pins, so install them explicitly
+      # rather than relying on whatever the image happened to include.
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          echo "ANDROID_HOME=${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          yes | "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" \
+            "platform-tools" "platforms;android-35" "build-tools;35.0.0" > /dev/null
+
+      - name: Build debug APK
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew --no-daemon --stacktrace assembleDebug \
+            -PstartUrl="$START_URL" \
+            -PappName="$APP_NAME"
+
+      - name: Verify, sign-check and rename the APK
+        run: |
+          set -euo pipefail
+          APK="$(ls app/build/outputs/apk/debug/*.apk | head -1)"
+          echo "Built: $APK"
+
+          BT="${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools/35.0.0"
+          "$BT/apksigner" verify --print-certs "$APK"
+          "$BT/aapt2" dump badging "$APK" | grep -E "package:|application-label:|sdkVersion:|targetSdkVersion:|uses-permission:" || true
+
+          VERSION="$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" app/build.gradle | head -1)"
+          NAME="FamilyHubTest-${VERSION:-0.0.0}-debug.apk"
+          cp "$APK" "../$NAME"
+          echo "APK_PATH=$NAME" >> "$GITHUB_ENV"
+          ls -lh "../$NAME"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: familyhub-test-apk
+          path: ${{ env.APK_PATH }}
+          if-no-files-found: error
+          retention-days: 30
+
+      # Optional: a Release gives a direct download link that can be shared to
+      # phones over WhatsApp/Bluetooth without logging into GitHub.
+      - name: Publish to a GitHub Release
+        if: ${{ inputs.publish_release }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: test-apk-run-${{ github.run_number }}
+          name: FamilyHub Test APK (run ${{ github.run_number }})
+          body: |
+            Test build only — placeholder name and icon, not final branding.
+
+            - Start URL: `${{ env.START_URL }}`
+            - Launcher label: `${{ env.APP_NAME }}`
+            - Signing: debug (internal test). If a previous build was installed
+              with a different debug key, uninstall it first.
+          files: ${{ env.APK_PATH }}
+          draft: false
+          prerelease: true

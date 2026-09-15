@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- app_name is intentionally NOT here: it is injected from
+         app/build.gradle (resValue) so the launcher label can be changed per
+         build with -PappName="..." without editing a resource file. -->
+
+    <string name="error_title">Can\'t reach FamilyHub</string>
+    <string name="error_no_network">This phone has no network connection right now.\n\nConnect to the BAWAXICT WiFi (or any network) and try again.</string>
+    <string name="error_host_only_on_hotspot">%1$s can only be reached while connected to the BAWAXICT hotspot WiFi in Ilorin.\n\nJoin that WiFi and try again, or open FamilyHub in your browser.</string>
+    <string name="error_generic">The page did not load.\n\nThis can happen on a busy hotspot connection.</string>
+    <string name="error_tls">The secure connection to this page was rejected, so it was not loaded.\n\nCheck the date and time on this phone, then try again.</string>
+
+    <string name="retry">Try again</string>
+    <string name="open_in_browser">Open in browser</string>
+    <string name="choose_file">Choose a file</string>
+    <string name="mic_rationale">FamilyHub needs the microphone to record a voice note.</string>
+    <string name="no_browser">No app on this phone can open that link.</string>
+</resources>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FamilyHub Test — WebView shell around the existing FamilyHub web app.
+
+  Permissions, and why each one is here:
+    INTERNET             — the app is a browser for our own site; nothing is
+                           bundled offline.
+    ACCESS_NETWORK_STATE — used only to word the connection-error screen
+                           accurately ("no network" vs "page failed").
+    RECORD_AUDIO         — private-chat.html records voice notes with
+                           getUserMedia({audio:true}). A hotspot browser prompts
+                           for the mic and can grant it; without this the app
+                           would silently fail a feature the site offers.
+                           It is requested at runtime only when a page asks.
+
+  Deliberately NOT declared:
+    CAMERA               — <input type="file" capture> is served with
+                           MediaStore.ACTION_IMAGE_CAPTURE, which delegates to
+                           the camera app. Declaring CAMERA would force this app
+                           to hold and be granted that permission itself for the
+                           same result.
+    ACCESS_FINE_LOCATION — site/_headers sets Permissions-Policy geolocation=(),
+                           so the site never asks.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+    <application
+        android:allowBackup="true"
+        android:hardwareAccelerated="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <!--
+          configChanges is the important one: without it, rotating the phone
+          destroys and recreates the Activity, which reloads the page and throws
+          away in-page state mid-conversation. Handled here so the WebView keeps
+          the same session a browser tab would.
+        -->
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density|fontScale"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Hands the camera app a writable content:// URI for photo capture. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+
+</manifest>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network security for a hotspot client.
+
+  The public site is HTTPS, but a real hotspot session is not HTTPS end to end:
+  the MikroTik captive portal is plain HTTP on the LAN (dns-name bawaxict.edu.net
+  -> hotspot-address 192.168.6.1), the on-LAN FamilyHub server is HTTP on :8080,
+  and pages served from Pages link back to those HTTP URLs ("Back to Hotspot").
+
+  CLOUDFLARE_DEPLOY/app/src/main/res/xml/network_security_config.xml sets
+  cleartextTrafficPermitted="false" for everything. In a WebView pointed at the
+  hotspot that produces ERR_CLEARTEXT_NOT_PERMITTED and a blank screen, so this
+  config keeps the strict default and opens cleartext only for the specific
+  hosts/IPs in site/mikrotik/*.rsc.
+-->
+<network-security-config>
+
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Captive portal / hotspot gateway, per the production .rsc. -->
+        <domain includeSubdomains="true">bawaxict.edu.net</domain>
+        <domain>192.168.6.1</domain>
+
+        <!-- On-LAN FamilyHub server: DNS entries and the firewall/walled-garden
+             rules in the .rsc both target 192.168.6.147:8080. -->
+        <domain>chat.bawaxict.edu.net</domain>
+        <domain>familyhub.chat</domain>
+        <domain>192.168.6.147</domain>
+        <domain>192.168.6.191</domain>
+
+        <!-- LAN gateway + loopback, for on-site debugging. -->
+        <domain>192.168.88.1</domain>
+        <domain>localhost</domain>
+        <domain>127.0.0.1</domain>
+    </domain-config>
+
+</network-security-config>

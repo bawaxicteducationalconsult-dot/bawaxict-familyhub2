@@ -1,0 +1,5 @@
+// Root build file. The Android Gradle Plugin version matches the one already
+// pinned in CLOUDFLARE_DEPLOY/build.gradle so both projects behave the same.
+plugins {
+    id 'com.android.application' version '8.6.1' apply false
+}

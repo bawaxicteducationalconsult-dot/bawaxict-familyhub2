@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Test-build placeholder colours, taken from the existing site palette
+         (site/index.html :root) so the icon does not look like final branding. -->
+    <color name="brand_green_900">#123B2C</color>
+    <color name="brand_green_700">#1D6B4C</color>
+    <color name="brand_green_500">#2CA671</color>
+    <color name="white">#FFFFFF</color>
+    <color name="error_background">#F7F8F7</color>
+    <color name="error_text">#33413A</color>
+    <color name="error_muted">#6B7A72</color>
+    <color name="ic_launcher_background">@color/brand_green_900</color>
+</resources>

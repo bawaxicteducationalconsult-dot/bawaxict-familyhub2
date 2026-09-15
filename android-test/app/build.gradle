@@ -1,0 +1,96 @@
+plugins {
+    id 'com.android.application'
+}
+
+// ---------------------------------------------------------------------------
+// Build parameters. Everything a test round needs to change is a -P property,
+// so no source file has to be edited to point the app at a different origin.
+//
+//   ./gradlew assembleDebug -PstartUrl="https://bawaxict-familyhub2.pages.dev/forum"
+//
+// The default below is the URL the production MikroTik config already sends
+// authenticated hotspot users to:
+//   site/mikrotik/BAWAXICT_MikroTik_FamilyHub_PRODUCTION_V2_FIXED.rsc
+//     /ip hotspot profile ... login-page-redirect="https://bawaxict-familyhub2.pages.dev/forum"
+// It is also in that config's walled garden, so it loads before a ticket too.
+// ---------------------------------------------------------------------------
+def startUrl = (project.findProperty('startUrl') ?: 'https://bawaxict-familyhub2.pages.dev/forum').toString()
+def appName = (project.findProperty('appName') ?: 'FamilyHub Test').toString()
+
+if (!startUrl.startsWith('http://') && !startUrl.startsWith('https://')) {
+    throw new GradleException("startUrl must be an absolute http(s) URL, got: ${startUrl}")
+}
+
+android {
+    namespace 'net.bawaxict.familyhubtest'
+    compileSdk 35
+
+    defaultConfig {
+        // Deliberately NOT net.bawaxict.familyhub (the CLOUDFLARE_DEPLOY skeleton):
+        // a distinct applicationId means this test build installs side by side
+        // with anything else already on the phone instead of replacing it.
+        applicationId 'net.bawaxict.familyhubtest'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0-test'
+
+        buildConfigField 'String', 'START_URL', "\"${startUrl}\""
+        // Strip the "; wv" WebView marker from the User-Agent so the server and
+        // the site's own JS see an ordinary mobile browser session. See
+        // UserAgents.java and the README before turning this off.
+        buildConfigField 'boolean', 'BROWSER_USER_AGENT', 'true'
+
+        // app_name comes from here (not strings.xml) so the launcher label can
+        // be changed per build without editing a resource file.
+        resValue 'string', 'app_name', appName
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        debug {
+            // No applicationIdSuffix: the id above is already the test id, and
+            // keeping one package name avoids confusing testers.
+            // Signed with Gradle's auto-generated debug key — no Play Store or
+            // release signing material is involved anywhere in this project.
+            debuggable true
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// Optional stable internal-test key. By default the build signs with the
+// auto-generated debug key, which needs no secrets at all but differs per
+// build machine (see README: "Installing over a previous build"). To keep one
+// key across test rounds, create keystore.properties next to this file — it is
+// gitignored — containing storeFile / storePassword / keyAlias / keyPassword,
+// then build with -PuseInternalTestKey=true
+def keystorePropsFile = rootProject.file('keystore.properties')
+if (project.findProperty('useInternalTestKey') == 'true' && keystorePropsFile.exists()) {
+    def kp = new Properties()
+    keystorePropsFile.withInputStream { kp.load(it) }
+    android.signingConfigs.create('internalTest') {
+        storeFile file(kp.getProperty('storeFile'))
+        storePassword kp.getProperty('storePassword')
+        keyAlias kp.getProperty('keyAlias')
+        keyPassword kp.getProperty('keyPassword')
+    }
+    android.buildTypes.debug.signingConfig = android.signingConfigs.internalTest
+}
+
+dependencies {
+    // Only for FileProvider (camera capture on <input type="file" capture>).
+    // No appcompat, no material, no lifecycle: the shell is a plain
+    // android.app.Activity around a WebView, so the dependency surface — and
+    // therefore the chance of a build breaking — stays minimal.
+    implementation 'androidx.core:core:1.13.1'
+}
