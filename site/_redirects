@@ -19,3 +19,8 @@
 # tickets landing somewhere correct instead of on a 404.
 /chat        /forum   302
 /chat.html   /forum   302
+
+# Shareable short profile links: /u/bawaxict -> profile.html?user=bawaxict
+# Pages placeholder syntax. profile.html?user=... remains the canonical form
+# and works everywhere, including the Oracle origin.
+/u/:name     /profile.html?user=:name   302
