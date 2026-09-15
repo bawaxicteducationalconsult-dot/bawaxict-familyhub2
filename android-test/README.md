@@ -67,13 +67,19 @@ easy to forward to phones over WhatsApp/Bluetooth.
 
 | | |
 |---|---|
-| File | `FamilyHubTest-0.1.0-test-debug.apk` |
-| Size | 1,997,200 bytes |
-| SHA-256 | `d3068c5de746632f37d77911b520d9a40c74314c53acc153e0b14a761175e5b9` |
+| Download | https://github.com/bawaxicteducationalconsult-dot/bawaxict-familyhub2/releases/tag/test-apk-0.1.0-test |
+| File | `FamilyHubTest-0.1.0-test-debug.apk` (1,997,200 bytes) |
+| SHA-256 | `834414a7871eb614900f41e860ec9aa9250d9707ed89539939684ebda44f31ba` |
 | Signing | Android Debug (`CN=Android Debug`) — `apksigner verify` passed |
 | Package | `net.bawaxict.familyhubtest`, versionCode 1, versionName `0.1.0-test` |
 | SDK | min 24 / target 35 / compile 35 |
 | Label | `FamilyHub Test` |
+
+> Warning: the debug key is generated per build run, so every round's APK has a
+> different signature. Testers must uninstall the previous "FamilyHub Test"
+> before installing a new round. For repeated rounds on the same phones, build
+> with `-PuseInternalTestKey=true` and a local `keystore.properties` (see
+> `app/build.gradle`) so the signature stays stable.
 
 Every successful run re-posts these facts (size, sha256, signing subject,
 badging) as a comment on its commit, so any round can be checked the same way.
