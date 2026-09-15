@@ -9,6 +9,7 @@ import urllib.parse
 import urllib.request
 import secrets
 import hashlib
+import datetime
 import os
 from http.cookies import SimpleCookie
 from pathlib import Path
@@ -34,6 +35,13 @@ MAX_TEXT = 4000
 MAX_MESSAGES = 150
 # Stage 4 media policy: conservative until larger cloud storage is available.
 MEDIA_RETENTION_SECONDS = 3 * 24 * 60 * 60
+# Feed photos are deliberately shorter-lived than chat attachments: the feed
+# itself only keeps posts for PUBLIC_RETENTION (5h), so a 12h photo TTL both
+# outlives its post and caps storage growth on the Oracle VM.
+POST_MEDIA_RETENTION_SECONDS = 12 * 60 * 60
+# How long a sender may edit their own message. 15 minutes matches the
+# common messaging convention and is well inside PRIVATE_RETENTION.
+MESSAGE_EDIT_WINDOW_SECONDS = 15 * 60
 MAX_IMAGE_BYTES = 2 * 1024 * 1024
 MAX_VOICE_BYTES = 3 * 1024 * 1024
 MEDIA_DIR = BASE / "media"
@@ -399,6 +407,22 @@ def init_db():
             "ALTER TABLE users ADD COLUMN whatsapp TEXT",
             "ALTER TABLE users ADD COLUMN social_link TEXT",
             "ALTER TABLE users ADD COLUMN hide_photo INTEGER NOT NULL DEFAULT 0",
+            # Photo posts: the feed composer can now attach one image.
+            "ALTER TABLE community ADD COLUMN media_id INTEGER",
+            # Chat edit/delete. Soft delete keeps the row so receipts,
+            # ordering and the "deleted" tombstone survive.
+            "ALTER TABLE private_messages ADD COLUMN edited_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE private_messages ADD COLUMN deleted_at INTEGER NOT NULL DEFAULT 0",
+            # Badge/rank counters. These MUST be cumulative columns rather than
+            # COUNT(*) over community/comments/likes, because cleanup() deletes
+            # posts after PUBLIC_RETENTION (5h) and cascades their likes and
+            # comments -- so those tables can never support a lifetime rank.
+            "ALTER TABLE users ADD COLUMN stat_posts INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN stat_comments INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN stat_likes_received INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN stat_active_days INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN stat_last_active_day TEXT",
+            "ALTER TABLE users ADD COLUMN badge_tier INTEGER NOT NULL DEFAULT 0",
             # Mockup rebuild: delivery/seen receipts for private chat. Additive only.
             "ALTER TABLE private_messages ADD COLUMN delivered_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE private_messages ADD COLUMN seen_at INTEGER NOT NULL DEFAULT 0",
@@ -417,6 +441,169 @@ def init_db():
                 ('ICT Support','repair','Computer, network and software support.','Assessment before service.',1,now),
             ])
         con.commit(); con.close()
+
+# ---------------------------------------------------------------------------
+# Badge / rank tiers
+#
+# Thresholds are exactly as specified by the product owner.
+#
+# IMPORTANT: ranking runs off cumulative counters on the users table, NOT off
+# COUNT(*) over community/comments/likes. cleanup() deletes public posts after
+# PUBLIC_RETENTION (5 hours) and cascades their likes and comments, so those
+# tables only ever hold a few hours of data and cannot express a lifetime rank.
+#
+# "Active days" counts distinct calendar days on which the user posted or
+# commented, which is what stops someone farming a tier in a single sitting.
+# ---------------------------------------------------------------------------
+BADGE_TIERS = [
+    # (tier, key, label, colour, min_contributions, min_likes_received, min_active_days)
+    #
+    # Like requirements are deliberately low relative to the contribution
+    # counts. A public post is only visible -- and therefore only likeable --
+    # for PUBLIC_RETENTION (5 hours) before cleanup() removes it, so likes
+    # accrue far more slowly than posts do. Raising PUBLIC_RETENTION was
+    # rejected: the short window is an intentional storage decision.
+    (0, 'novice',   'Novice',   '#98A2B3',   0,  0,  0),
+    (1, 'active',   'Active',   '#CD7F32',  10,  0,  3),
+    (2, 'trusted',  'Trusted',  '#9CA3AF',  50,  5, 10),
+    (3, 'pillar',   'Pillar',   '#D4A017', 150, 20, 30),
+]
+
+def badge_for(contributions, likes_received, active_days):
+    """Highest tier whose three requirements are all met."""
+    best = BADGE_TIERS[0]
+    for t in BADGE_TIERS:
+        if contributions >= t[4] and likes_received >= t[5] and active_days >= t[6]:
+            best = t
+    return best
+
+def badge_payload(user):
+    """Badge block for API responses, including progress to the next tier."""
+    contributions = int(user['stat_posts'] or 0) + int(user['stat_comments'] or 0)
+    likes = int(user['stat_likes_received'] or 0)
+    days = int(user['stat_active_days'] or 0)
+    tier = badge_for(contributions, likes, days)
+    nxt = next((t for t in BADGE_TIERS if t[0] == tier[0] + 1), None)
+    out = {'tier': tier[0], 'key': tier[1], 'label': tier[2], 'color': tier[3],
+           'contributions': contributions, 'likesReceived': likes, 'activeDays': days}
+    if nxt:
+        out['next'] = {'label': nxt[2],
+                       'needContributions': max(0, nxt[4] - contributions),
+                       'needLikes': max(0, nxt[5] - likes),
+                       'needActiveDays': max(0, nxt[6] - days)}
+    return out
+
+def bump_stat(con, user_id, field, delta=1, now=None):
+    """Increment a cumulative counter and refresh the stored tier.
+
+    Called on the actions themselves rather than by a sweep: the sweep would
+    have nothing to count once cleanup() has removed the underlying rows.
+    """
+    if field not in ('stat_posts', 'stat_comments', 'stat_likes_received'):
+        return
+    con.execute('UPDATE users SET %s=COALESCE(%s,0)+? WHERE id=?' % (field, field), (delta, user_id))
+    if field in ('stat_posts', 'stat_comments'):
+        today = datetime.date.fromtimestamp(now or int(time.time())).isoformat()
+        row = con.execute('SELECT stat_last_active_day FROM users WHERE id=?', (user_id,)).fetchone()
+        if row and (row['stat_last_active_day'] or '') != today:
+            con.execute('UPDATE users SET stat_active_days=COALESCE(stat_active_days,0)+1, '
+                        'stat_last_active_day=? WHERE id=?', (today, user_id))
+    u = con.execute('SELECT * FROM users WHERE id=?', (user_id,)).fetchone()
+    if u:
+        con.execute('UPDATE users SET badge_tier=? WHERE id=?', (badge_payload(u)['tier'], user_id))
+
+
+# ---------------------------------------------------------------------------
+# Daily Pulse
+#
+# v1 is a fixed rotating library: one prompt per calendar day, chosen
+# deterministically from the date so every member sees the same question and
+# it needs no table, no admin work and no scheduler.
+#
+# get_daily_prompt() is deliberately the ONLY place the source is decided.
+# Swapping to admin-authored prompts (a pulse_prompts table) or feed-derived
+# ones later means replacing this one function -- callers stay unchanged.
+# ---------------------------------------------------------------------------
+DAILY_PROMPTS = [
+    "What is one skill you would like to learn this year?",
+    "Which local business deserves more attention? Give them a shout-out.",
+    "What is the best advice anyone in this community has given you?",
+    "If you could fix one thing in your neighbourhood, what would it be?",
+    "What are you working on this week?",
+    "Which Nigerian meal do you cook best?",
+    "What is a cheap trick that saves you data every month?",
+    "Who taught you the most useful thing you know?",
+    "What is one app you could not do without?",
+    "What small win are you proud of this week?",
+    "Which local artisan would you recommend and why?",
+    "What is the best thing you bought for under 5,000 naira?",
+    "What would you tell someone starting their first business?",
+    "Which subject did you enjoy most in school?",
+    "What is one thing visitors should know about your area?",
+    "What is your go-to solution when the power goes out?",
+    "Which skill should schools teach but do not?",
+    "What is the kindest thing a stranger has done for you?",
+    "What is your favourite way to relax after a long day?",
+    "Which local event should more people attend?",
+    "What is a common mistake people make with phones or laptops?",
+    "If you had a free afternoon, how would you spend it?",
+    "What is the most useful thing you learned online?",
+    "Which product do people always ask you to help them buy?",
+    "What is your best tip for saving money?",
+    "Who is a role model from your community?",
+    "What is something you changed your mind about recently?",
+    "What is the most useful WhatsApp group you belong to?",
+    "Which repair did you manage to do yourself?",
+    "What is the one tool you use every single day?",
+    "What advice would you give your younger self?",
+    "Which route do you take to avoid traffic?",
+    "What is worth paying extra for?",
+    "Which local food spot never disappoints?",
+    "What is the best way to learn a new skill quickly?",
+    "What is something you wish you had started earlier?",
+    "How do you keep your phone battery alive all day?",
+    "What is a problem here that a small business could solve?",
+    "Which book, video or course actually changed something for you?",
+    "What is a fair price for a job well done?",
+    "What is the first thing you do every morning?",
+    "Which service is hardest to find nearby?",
+    "What is the smartest thing you have seen someone build?",
+    "How do you decide who to trust for repairs?",
+    "What would make this community better in one sentence?",
+    "Which season of the year do you prefer and why?",
+    "What is one thing you would never buy secondhand?",
+    "What is the most useful thing in your toolbox or bag?",
+    "Who in this community should we hear more from?",
+    "What is a scam people around here should watch out for?",
+    "What is the best way to spend a Saturday?",
+    "Which childhood game should make a comeback?",
+    "What is something you can teach someone in ten minutes?",
+    "What do you always keep a spare of?",
+    "Which local road most needs fixing?",
+    "What is your honest opinion about online shopping?",
+    "What is a habit that improved your week?",
+    "Which music gets you through work?",
+    "What is the best question to ask before hiring someone?",
+    "What is one thing you are grateful for today?",
+]
+
+def get_daily_prompt(day=None):
+    """Return {'date','index','prompt'} for a calendar day (UTC).
+
+    Deterministic: the same date always yields the same prompt, so clients
+    can cache it and every member sees the same question. `day` accepts a
+    datetime.date or an ISO 'YYYY-MM-DD' string; defaults to today.
+    """
+    if day is None:
+        day = datetime.date.today()
+    elif isinstance(day, str):
+        try:
+            day = datetime.date.fromisoformat(day)
+        except Exception:
+            day = datetime.date.today()
+    idx = day.toordinal() % len(DAILY_PROMPTS)
+    return {'date': day.isoformat(), 'index': idx, 'prompt': DAILY_PROMPTS[idx]}
+
 
 def record_activity(con, user, now):
     """Credit active platform engagement for verified hotspot users only.
@@ -469,6 +656,11 @@ def cleanup():
             try: (MEDIA_DIR / m['storage_name']).unlink(missing_ok=True)
             except Exception: pass
         con.execute("DELETE FROM media WHERE expires_at < ?",(now,))
+        # Feed posts are swept at PUBLIC_RETENTION (5h) but their photos carry a
+        # 12h TTL, so expire any post photo whose post is already gone rather
+        # than letting the file sit unreferenced until its own deadline.
+        con.execute("UPDATE media SET expires_at=? WHERE kind='post_image' AND attached_message_id IS NOT NULL AND attached_message_id NOT IN (SELECT id FROM community)",(now-1,))
+        con.execute("UPDATE community SET media_id=NULL WHERE media_id IS NOT NULL AND media_id NOT IN (SELECT id FROM media)")
         # Threads with no messages and no recent activity remain as the user's permanent private list.
         con.commit(); con.close()
 
@@ -674,8 +866,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
             fp=MEDIA_DIR/m['storage_name']
             if not fp.exists(): con.close(); send_json(self,{'error':'Media file is unavailable.'},404); return
             data=fp.read_bytes(); con.close(); self.send_response(200); self.send_header('Content-Type',m['mime_type']); self.send_header('Content-Length',str(len(data))); self.send_header('Cache-Control','private, max-age=60'); self.end_headers(); self.wfile.write(data); return
+        if path=='/api/pulse':
+            # Daily Pulse: today's community discussion prompt.
+            # Public + deterministic, so it can be cached client-side for the day.
+            send_json(self, dict(get_daily_prompt(), label='Daily Pulse')); return
         if path=='/api/health':
-            send_json(self,{'ok':True,'service':'BAWAXICT Community Chat','version':'Stage 8 AI + Services','communityRetentionHours':5,'privateRetentionDays':2,'identityDays':21,'rewardEligibility':'verified hotspot users only','rewardThresholdHours':5,'rewardAutoClaim':True}); return
+            send_json(self,{'ok':True,'service':'BAWAXICT Community Chat','version':'Stage 8 AI + Services','communityRetentionHours':5,'privateRetentionDays':2,'identityDays':21,'rewardEligibility':'verified hotspot users only','rewardThresholdHours':REWARD_THRESHOLD_SECONDS//3600,'rewardAutoClaim':True,'rewardAutoAward':True,'rewardFulfilmentManual':True,'rewardFulfilmentNote':'Winning is automatic; an admin pastes the MikroTik voucher code, which is then delivered to the winner in-app.'}); return
         if path in ('/admin/rewards','/admin/rewards.html'):
             data=(BASE/'admin'/'rewards.html').read_bytes(); self.send_response(200); self.send_header('Content-Type','text/html; charset=utf-8'); self.send_header('Content-Length',str(len(data))); self.send_header('Cache-Control','no-store'); self.end_headers(); self.wfile.write(data); return
         if path=='/api/community-activities':
@@ -923,7 +1119,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if path=='/api/profile':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
                 pm=con.execute('SELECT id FROM media WHERE id=?',(user['profile_media_id'],)).fetchone() if user['profile_media_id'] else None
-                con.close(); send_json(self,{'username':user['username'],'hidden':bool(user['hidden']),'identityExpires':user['identity_expires'],'hotspotUser':bool(user['hotspot_user']),'usernameChangedAt':int(user['username_changed_at'] or 0),'usernameChangeAvailableAt':int(user['username_change_available_at'] or 0),'usernameChangeAvailable':int(user['username_change_available_at'] or 0) <= int(time.time()),'location':user['location'] or '','sex':user['sex'] or '','country':user['country'] or '','state':user['state'] or '','whatsapp':user['whatsapp'] or '','socialLink':user['social_link'] or '','hidePhoto':bool(user['hide_photo']),'profilePhotoId':(None if user['hide_photo'] else (pm['id'] if pm else None))}); return
+                con.close(); send_json(self,{'username':user['username'],'hidden':bool(user['hidden']),'identityExpires':user['identity_expires'],'hotspotUser':bool(user['hotspot_user']),'usernameChangedAt':int(user['username_changed_at'] or 0),'usernameChangeAvailableAt':int(user['username_change_available_at'] or 0),'usernameChangeAvailable':int(user['username_change_available_at'] or 0) <= int(time.time()),'location':user['location'] or '','sex':user['sex'] or '','country':user['country'] or '','state':user['state'] or '','whatsapp':user['whatsapp'] or '','socialLink':user['social_link'] or '','hidePhoto':bool(user['hide_photo']),'profilePhotoId':(None if user['hide_photo'] else (pm['id'] if pm else None)),'badge':badge_payload(user)}); return
             if path=='/api/profile/public':
                 target=params.get('username',[''])[0].strip()
                 if not target: con.close(); send_json(self,{'error':'Missing username.'},400); return
@@ -932,7 +1128,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 pm=con.execute('SELECT id FROM media WHERE id=?',(u['profile_media_id'],)).fetchone() if u['profile_media_id'] else None
                 following=bool(user and con.execute('SELECT 1 FROM follows WHERE follower_id=? AND followed_id=?',(user['id'],u['id'])).fetchone())
                 con.close()
-                send_json(self,{'username':u['username'],'location':u['location'] or '','sex':u['sex'] or '','country':u['country'] or '','state':u['state'] or '','profilePhotoId':(None if u['hide_photo'] else (pm['id'] if pm else None)),'following':following})
+                send_json(self,{'username':u['username'],'location':u['location'] or '','sex':u['sex'] or '','country':u['country'] or '','state':u['state'] or '','profilePhotoId':(None if u['hide_photo'] else (pm['id'] if pm else None)),'following':following,'badge':badge_payload(u)})
                 return
             if path=='/api/profile/public/posts':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
@@ -942,7 +1138,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if not u: con.close(); send_json(self,{'error':'User not found.'},404); return
                 if u['hidden'] and u['id']!=user['id']:
                     con.close(); send_json(self,{'username':u['username'],'hidden':True,'posts':[]}); return
-                rows=con.execute('SELECT id,username_snapshot,message,created_at FROM community WHERE user_id=? ORDER BY id DESC LIMIT 150',(u['id'],)).fetchall()
+                rows=con.execute('SELECT id,username_snapshot,message,created_at,(SELECT m.id FROM media m WHERE m.id=community.media_id AND m.expires_at>strftime("%s","now")) AS photo_id FROM community WHERE user_id=? ORDER BY id DESC LIMIT 150',(u['id'],)).fetchall()
                 con.close(); send_json(self,{'username':u['username'],'hidden':False,'posts':[dict(r) for r in rows]}); return
             if path=='/api/blocks':
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
@@ -951,9 +1147,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if not user: con.close(); send_json(self,{'error':'Not joined'},401); return
                 since=max(0,int(params.get('since',['0'])[0] or 0))
                 sort=str(params.get('sort',[''])[0] or '')
+                # photoId resolves through media so an expired/swept photo simply
+                # disappears from the post instead of 404-ing in the client.
                 base=('SELECT c.id,c.username_snapshot,c.message,c.created_at,'
                       '(SELECT COUNT(*) FROM likes l WHERE l.post_id=c.id) AS like_count,'
                       '(SELECT COUNT(*) FROM comments cm WHERE cm.post_id=c.id) AS comment_count,'
+                      '(SELECT m.id FROM media m WHERE m.id=c.media_id AND m.expires_at>strftime("%s","now")) AS photo_id,'
                       'EXISTS(SELECT 1 FROM likes l2 WHERE l2.post_id=c.id AND l2.user_id=?) AS liked FROM community c')
                 if sort=='top':
                     rows=con.execute(base+' ORDER BY (like_count+comment_count) DESC, c.id DESC LIMIT 150',(user['id'],)).fetchall()
@@ -971,6 +1170,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 rows=con.execute('SELECT c.id,c.username_snapshot,c.message,c.created_at,'
                                  '(SELECT COUNT(*) FROM likes l WHERE l.post_id=c.id) AS like_count,'
                                  '(SELECT COUNT(*) FROM comments cm WHERE cm.post_id=c.id) AS comment_count,'
+                                 '(SELECT m.id FROM media m WHERE m.id=c.media_id AND m.expires_at>strftime("%s","now")) AS photo_id,'
                                  'EXISTS(SELECT 1 FROM likes l2 WHERE l2.post_id=c.id AND l2.user_id=?) AS liked '
                                  'FROM community c JOIN follows f ON f.followed_id=c.user_id WHERE f.follower_id=? ORDER BY c.id DESC LIMIT 150',(user['id'],user['id'])).fetchall()
                 rows=list(reversed(rows))
@@ -1006,7 +1206,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if not t: con.close(); send_json(self,{'messages':[],'blocked':False,'thread':None}); return
                 blocked=con.execute('SELECT 1 FROM blocks WHERE (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)',(user['id'],other['id'],other['id'],user['id'])).fetchone()
                 if blocked: con.close(); send_json(self,{'messages':[],'blocked':True,'thread':t['id']}); return
-                rows=con.execute('SELECT pm.id,pm.sender_id,pm.recipient_id,pm.sender_snapshot,pm.message,pm.created_at,pm.delivered_at,pm.seen_at, m.id AS attachment_id,m.kind AS attachment_kind,m.mime_type AS attachment_mime,m.original_name AS attachment_name,m.size_bytes AS attachment_size,m.expires_at AS attachment_expires FROM private_messages pm LEFT JOIN media m ON m.attached_message_id=pm.id AND m.expires_at>? WHERE pm.thread_id=? ORDER BY pm.id ASC LIMIT 150',(int(time.time()),t['id'])).fetchall(); out=[]
+                rows=con.execute('SELECT pm.id,pm.sender_id,pm.recipient_id,pm.sender_snapshot,pm.message,pm.created_at,pm.delivered_at,pm.seen_at,pm.edited_at,pm.deleted_at, m.id AS attachment_id,m.kind AS attachment_kind,m.mime_type AS attachment_mime,m.original_name AS attachment_name,m.size_bytes AS attachment_size,m.expires_at AS attachment_expires FROM private_messages pm LEFT JOIN media m ON m.attached_message_id=pm.id AND m.expires_at>? WHERE pm.thread_id=? ORDER BY pm.id ASC LIMIT 150',(int(time.time()),t['id'])).fetchall(); out=[]
                 # Mockup rebuild: fetching a thread is proof of delivery to this device.
                 now_ts=int(time.time())
                 con.execute('UPDATE private_messages SET delivered_at=? WHERE thread_id=? AND recipient_id=? AND delivered_at=0',(now_ts,t['id'],user['id']))
@@ -1067,8 +1267,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 notice_ids=[r['id'] for r in due]
                 if notice_ids:
                     con.executemany('UPDATE notices SET delivered=1 WHERE id=?',[(i,) for i in notice_ids]); con.commit()
+                # Reward notices carry the actual voucher code. Marking them
+                # delivered only controls the one-time popup -- the inbox below
+                # keeps them readable, otherwise a winner who closed the modal
+                # (or reloaded mid-popup) lost their code permanently.
+                inbox=con.execute("SELECT id,kind,message,created_at,delivered FROM notices "
+                                  "WHERE user_id=? ORDER BY id DESC LIMIT 50",(user['id'],)).fetchall()
                 out={'chatSeconds':chat_seconds,'thresholdSeconds':REWARD_THRESHOLD_SECONDS,'label':REWARD_LABEL,'eligible':bool(user['hotspot_user']),
                      'tier':tier,'secondsToNext':remaining,'history':[dict(r) for r in pending],
+                     'inbox':[{'id':r['id'],'kind':r['kind'],'message':r['message'],
+                               'createdAt':r['created_at'],'seen':bool(r['delivered'])} for r in inbox],
                      'notices':[r['message'] for r in due]}
                 con.close(); send_json(self,out); return
             if path=='/api/admin/rewards':
@@ -1413,8 +1621,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 con.close(); send_json(self,{'error':str(e)},400); return
             safe_name=re.sub(r'[^A-Za-z0-9._-]+','_',Path(filename).name)[:120] or 'upload'
             mime=mime.split(';',1)[0].strip().lower()
+            # scope=post marks a feed photo, which gets the shorter 12h TTL.
+            # Anything else keeps the existing 3-day chat-attachment policy.
+            scope=urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get('scope',[''])[0].strip().lower()
             if mime in ALLOWED_IMAGE_TYPES:
-                kind='image'; limit=MAX_IMAGE_BYTES
+                kind='post_image' if scope=='post' else 'image'
+                limit=MAX_IMAGE_BYTES
             elif mime in ALLOWED_VOICE_TYPES:
                 kind='voice'; limit=MAX_VOICE_BYTES
             else:
@@ -1422,10 +1634,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if len(data_bytes)==0 or len(data_bytes)>limit:
                 con.close(); send_json(self,{'error':f'{kind.title()} file is empty or exceeds the current size limit.'},413); return
             now=int(time.time()); storage=secrets.token_hex(16)+'_'+safe_name
+            ttl = POST_MEDIA_RETENTION_SECONDS if kind=='post_image' else MEDIA_RETENTION_SECONDS
             try:
                 (MEDIA_DIR/storage).write_bytes(data_bytes)
-                cur=con.execute('INSERT INTO media(owner_id,kind,mime_type,original_name,storage_name,size_bytes,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?)',(user['id'],kind,mime,safe_name,storage,len(data_bytes),now,now+MEDIA_RETENTION_SECONDS))
-                mid=cur.lastrowid; con.commit(); m=con.execute('SELECT * FROM media WHERE id=?',(mid,)).fetchone(); con.close(); send_json(self,{'ok':True,'media':media_response(m),'policy':{'retentionDays':3,'autoDelete':True}}); return
+                cur=con.execute('INSERT INTO media(owner_id,kind,mime_type,original_name,storage_name,size_bytes,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?)',(user['id'],kind,mime,safe_name,storage,len(data_bytes),now,now+ttl))
+                mid=cur.lastrowid; con.commit(); m=con.execute('SELECT * FROM media WHERE id=?',(mid,)).fetchone(); con.close(); send_json(self,{'ok':True,'media':media_response(m),'policy':{'retentionHours':ttl//3600,'autoDelete':True}}); return
             except Exception:
                 try: (MEDIA_DIR/storage).unlink(missing_ok=True)
                 except Exception: pass
@@ -1525,14 +1738,31 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 t=get_thread(con,user['id'],other['id'],True);con.commit();con.close();send_json(self,{'ok':True,'threadId':t['id'],'username':other['username']});return
             if path=='/api/community':
                 message=str(data.get('message','')).strip()
-                if not message or len(message)>MAX_TEXT:con.close();send_json(self,{'error':'Message is empty or too long.'},400);return
+                # Photo posts: validate the attachment first, because a post with
+                # an image is allowed to have no caption.
+                media_id=data.get('mediaId')
+                media_row=None
+                if media_id:
+                    try: media_id=int(media_id)
+                    except Exception: con.close();send_json(self,{'error':'Invalid photo.'},400);return
+                    media_row=con.execute(
+                        'SELECT * FROM media WHERE id=? AND owner_id=? AND expires_at>?',
+                        (media_id,user['id'],int(time.time()))).fetchone()
+                    if not media_row or media_row['kind'] not in ('image','post_image'):
+                        con.close();send_json(self,{'error':'Photo not found or expired. Please re-attach it.'},400);return
+                else:
+                    media_id=None
+                if len(message)>MAX_TEXT:con.close();send_json(self,{'error':'Message is too long.'},400);return
+                if not message and not media_id:con.close();send_json(self,{'error':'Message is empty or too long.'},400);return
                 if not allow_message(user['id']):
                     con.close(); send_json(self,{'error':'You are sending messages too quickly. Please wait a few seconds.'},429); return
                 hit=contains_abuse(message)
                 if hit:
                     now=int(time.time());con.execute('INSERT INTO flags(scope,username,term,message,created_at) VALUES(?,?,?,?,?)',('forum',user['username'],hit,message,now));con.commit();con.close()
                     send_json(self,{'error':'Message blocked: it looks like it contains abusive or insulting language. Please keep Community Chat respectful — repeated attempts are visible to the admin.'},400);return
-                now=int(time.time()); cur=con.execute('INSERT INTO community(user_id,username_snapshot,message,created_at) VALUES(?,?,?,?)',(user['id'],user['username'],message,now)); message_id=cur.lastrowid
+                now=int(time.time()); cur=con.execute('INSERT INTO community(user_id,username_snapshot,message,created_at,media_id) VALUES(?,?,?,?,?)',(user['id'],user['username'],message,now,media_id)); message_id=cur.lastrowid
+                if media_id: con.execute('UPDATE media SET attached_message_id=? WHERE id=?',(message_id,media_id))
+                bump_stat(con,user['id'],'stat_posts',1,now)
 
                 add_activity(
                     con,
@@ -1548,7 +1778,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if path=='/api/community/like':
                 try: pid=int(data.get('postId') or 0)
                 except Exception: pid=0
-                post=con.execute('SELECT id FROM community WHERE id=?',(pid,)).fetchone()
+                post=con.execute('SELECT id,user_id FROM community WHERE id=?',(pid,)).fetchone()
                 if not post: con.close(); send_json(self,{'error':'Post not found.'},404); return
                 if not allow_message(user['id']):
                     con.close(); send_json(self,{'error':'Too many likes. Please wait a few seconds.'},429); return
@@ -1559,6 +1789,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 else:
                     con.execute('INSERT OR IGNORE INTO likes(post_id,user_id,created_at) VALUES(?,?,?)',(pid,user['id'],now)); liked=True
                 count=con.execute('SELECT COUNT(*) n FROM likes WHERE post_id=?',(pid,)).fetchone()['n']
+                # Credit the post AUTHOR, not the liker, and never self-likes.
+                if post['user_id'] and post['user_id']!=user['id']:
+                    bump_stat(con,post['user_id'],'stat_likes_received',1 if liked else -1,now)
                 record_activity(con,user,now); emit_event(con,0,'community.like',{'postId':pid,'username':user['username'],'liked':liked,'likeCount':count,'createdAt':now}); con.commit(); con.close(); send_json(self,{'ok':True,'liked':liked,'likeCount':count}); return
             if path=='/api/community/comment':
                 try: pid=int(data.get('postId') or 0)
@@ -1575,7 +1808,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     send_json(self,{'error':'Comment blocked: it looks like it contains abusive or insulting language. Please keep Community Chat respectful — repeated attempts are visible to the admin.'},400);return
                 now=int(time.time()); cur=con.execute('INSERT INTO comments(post_id,user_id,username_snapshot,message,created_at) VALUES(?,?,?,?,?)',(pid,user['id'],user['username'],message,now)); comment_id=cur.lastrowid
                 count=con.execute('SELECT COUNT(*) n FROM comments WHERE post_id=?',(pid,)).fetchone()['n']
-                record_activity(con,user,now); emit_event(con,0,'community.comment',{'commentId':comment_id,'postId':pid,'username':user['username'],'message':message,'commentCount':count,'createdAt':now}); con.commit(); con.close(); send_json(self,{'ok':True,'comment':{'id':comment_id,'username_snapshot':user['username'],'message':message,'created_at':now},'commentCount':count});return
+                record_activity(con,user,now); bump_stat(con,user['id'],'stat_comments',1,now); emit_event(con,0,'community.comment',{'commentId':comment_id,'postId':pid,'username':user['username'],'message':message,'commentCount':count,'createdAt':now}); con.commit(); con.close(); send_json(self,{'ok':True,'comment':{'id':comment_id,'username_snapshot':user['username'],'message':message,'created_at':now},'commentCount':count});return
             if path=='/api/private':
                 recipient=str(data.get('recipient','')).strip();message=str(data.get('message','')).strip();other=con.execute('SELECT * FROM users WHERE username=?',(recipient,)).fetchone()
                 if not other or other['id']==user['id'] or len(message)>MAX_TEXT:con.close();send_json(self,{'error':'Recipient or message is invalid.'},400);return
@@ -1593,6 +1826,47 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 t=get_thread(con,user['id'],other['id'],True);now=int(time.time());cur=con.execute('INSERT INTO private_messages(thread_id,sender_id,recipient_id,sender_snapshot,message,created_at) VALUES(?,?,?,?,?,?)',(t['id'],user['id'],other['id'],user['username'],message,now)); msg_id=cur.lastrowid
                 if attachment_id: con.execute('UPDATE media SET attached_message_id=? WHERE id=?',(msg_id,attachment_id))
                 con.execute('UPDATE threads SET last_activity=? WHERE id=?',(now,t['id']));record_activity(con,user,now); emit_event(con,other['id'],'private.message',{'messageId':msg_id,'threadId':t['id'],'senderId':user['id'],'sender':user['username'],'message':message,'attachmentId':attachment_id or None,'createdAt':now}); emit_event(con,user['id'],'private.sent',{'messageId':msg_id,'threadId':t['id'],'recipientId':other['id'],'recipient':other['username'],'createdAt':now}); con.commit();con.close();send_json(self,{'ok':True,'threadId':t['id'],'messageId':msg_id,'attachmentId':attachment_id or None});return
+            if path in ('/api/private/edit','/api/private/delete'):
+                """Sender-only edit/delete for a private message.
+
+                Delete is a SOFT delete: the row stays so thread ordering,
+                delivered/seen receipts and the recipient's tombstone all keep
+                working. Any attachment is expired immediately so the file does
+                not outlive the message it belonged to."""
+                try: mid=int(data.get('messageId') or 0)
+                except Exception: mid=0
+                if not mid: con.close(); send_json(self,{'error':'Missing message id.'},400); return
+                m=con.execute('SELECT * FROM private_messages WHERE id=?',(mid,)).fetchone()
+                if not m: con.close(); send_json(self,{'error':'Message not found.'},404); return
+                if m['sender_id']!=user['id']:
+                    con.close(); send_json(self,{'error':'You can only change your own messages.'},403); return
+                if int(m['deleted_at'] or 0):
+                    con.close(); send_json(self,{'error':'That message was already deleted.'},409); return
+                now=int(time.time())
+
+                if path=='/api/private/delete':
+                    con.execute('UPDATE private_messages SET deleted_at=?, message=? WHERE id=?',(now,'',mid))
+                    con.execute('UPDATE media SET expires_at=? WHERE attached_message_id=?',(now-1,mid))
+                    emit_event(con,m['recipient_id'],'private.deleted',{'messageId':mid,'threadId':m['thread_id'],'at':now})
+                    emit_event(con,user['id'],'private.deleted',{'messageId':mid,'threadId':m['thread_id'],'at':now})
+                    con.commit(); con.close(); send_json(self,{'ok':True,'messageId':mid,'deletedAt':now}); return
+
+                if now-int(m['created_at']) > MESSAGE_EDIT_WINDOW_SECONDS:
+                    con.close(); send_json(self,{'error':'That message is too old to edit.',
+                                                 'windowSeconds':MESSAGE_EDIT_WINDOW_SECONDS},403); return
+                text=str(data.get('message','')).strip()
+                if not text or len(text)>MAX_TEXT:
+                    con.close(); send_json(self,{'error':'Message is empty or too long.'},400); return
+                hit=contains_abuse(text)
+                if hit:
+                    con.execute('INSERT INTO flags(scope,username,term,message,created_at) VALUES(?,?,?,?,?)',
+                                ('private-edit',user['username'],hit,text,now))
+                    con.commit(); con.close()
+                    send_json(self,{'error':'Edit blocked: it looks like it contains abusive or insulting language.'},400); return
+                con.execute('UPDATE private_messages SET message=?, edited_at=? WHERE id=?',(text,now,mid))
+                emit_event(con,m['recipient_id'],'private.edited',{'messageId':mid,'threadId':m['thread_id'],'message':text,'at':now})
+                emit_event(con,user['id'],'private.edited',{'messageId':mid,'threadId':m['thread_id'],'message':text,'at':now})
+                con.commit(); con.close(); send_json(self,{'ok':True,'messageId':mid,'message':text,'editedAt':now}); return
             if path=='/api/typing':
                 # Mockup rebuild: heartbeat that this user is typing in a thread.
                 # Cheap upsert; rows are read with a TTL and swept in cleanup().

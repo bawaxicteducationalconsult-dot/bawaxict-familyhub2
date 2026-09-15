@@ -258,6 +258,28 @@ img{display:block;max-width:100%}
 @media(min-width:861px){.more-veil{display:none !important}}
 @media(max-width:360px){.more-grid{grid-template-columns:repeat(2,1fr)}}
 
+/* daily pulse */
+.pulse-q{font-size:14px;line-height:1.5;color:var(--ink-900);font-weight:600;margin:4px 0 12px}
+.pulse-btn{width:100%;min-height:44px;border:0;border-radius:12px;background:var(--green-700);
+  color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
+.pulse-btn:hover{background:var(--green-900)}
+
+/* composer photo preview */
+.photo-preview{position:relative;margin:10px 0;border-radius:14px;overflow:hidden;
+  border:1px solid var(--border);background:var(--bg);max-width:320px}
+.photo-preview img{display:block;width:100%;max-height:240px;object-fit:cover}
+.photo-preview .photo-x{position:absolute;top:8px;right:8px;width:30px;height:30px;
+  border:0;border-radius:50%;background:rgba(18,26,22,.72);color:#fff;font-size:18px;
+  line-height:1;cursor:pointer}
+/* photo inside a rendered post */
+.post-photo{display:block;margin-top:10px;border-radius:14px;overflow:hidden;border:1px solid var(--border)}
+.post-photo img{display:block;width:100%;max-height:420px;object-fit:cover;cursor:zoom-in}
+/* lightbox */
+#photoLightbox{position:fixed;inset:0;background:rgba(11,26,20,.92);z-index:400;
+  display:none;align-items:center;justify-content:center;padding:20px;cursor:zoom-out}
+#photoLightbox.show{display:flex}
+#photoLightbox img{max-width:100%;max-height:100%;border-radius:12px}
+
 /* overlays: gate / recovery / profile / report / author / notifications */
 #gateOverlay,#recoveryOverlay{position:fixed;inset:0;background:rgba(18,26,22,.62);display:none;place-items:center;padding:18px;z-index:200}
 #gateOverlay.show{display:grid}
@@ -425,10 +447,12 @@ img{display:block;max-width:100%}
         <div class="composer-editor" id="composerEditor">
           <textarea id="composerText" maxlength="4000" placeholder="Share something with the community…"></textarea>
           <div class="composer-hint">Public posts are automatically removed after 5 hours. Keep it respectful — abusive messages are blocked automatically.</div>
+          <div class="photo-preview" id="composerPhotoPreview" style="display:none"></div>
         </div>
         <div class="composer-actions">
           <div class="composer-opts">
             <button class="composer-opt" id="composerPhotoBtn" type="button">📷 Photo</button>
+            <input type="file" id="composerPhotoInput" accept="image/jpeg,image/png,image/webp" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
             <button class="composer-opt" id="composerNoticeBtn" type="button">📢 Notice</button>
           </div>
           <div style="display:flex;gap:4px">
@@ -491,10 +515,11 @@ img{display:block;max-width:100%}
       <div class="cs-note">Ranked live from real #hashtags in community posts. Tap a topic to filter the feed.</div>
     </div>
 
-    <div class="rr-card cs-card" id="pulseCard">
-      <div class="rr-title">💓 Daily Pulse <span class="cs-badge">Coming Soon</span></div>
-      <div class="cs-item"><b>Today's discussion prompt</b><span>A fresh community question every day.</span></div>
-      <div class="cs-note">Daily discussion prompts are on the way. Join the conversation in the feed for now.</div>
+    <div class="rr-card" id="pulseCard">
+      <div class="rr-title">💓 Daily Pulse</div>
+      <div class="pulse-q" id="pulseQuestion">Loading today's question…</div>
+      <button class="pulse-btn" id="pulseAnswerBtn" type="button">Answer in the feed →</button>
+      <div class="cs-note" id="pulseDate"></div>
     </div>
 
     <div class="rr-card">
@@ -506,6 +531,8 @@ img{display:block;max-width:100%}
 </div>
 
 <!-- ============ MOBILE 5-TAB BAR (approved mockup tabs) ============ -->
+<div id="photoLightbox"><img id="photoLightboxImg" alt=""></div>
+
 <nav class="bottom-nav">
   <a class="bn-item" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Home</a>
   <a class="bn-item" href="private-chat.html" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Chat<span class="count-badge" id="chatBadgeBottom" style="display:none">0</span></a>
@@ -740,6 +767,15 @@ function toast(msg){
 }
 function comingSoon(feature){ toast(feature + ' is coming soon 🚧'); }
 
+(function(){
+  var lb = document.getElementById('photoLightbox');
+  if(!lb) return;
+  lb.addEventListener('click', function(){ lb.classList.remove('show'); });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') lb.classList.remove('show');
+  });
+})();
+
 /* ---------- state ---------- */
 var joined = false, CHAT_USER = '', MY_ID = 0, IDENTITY_EXPIRES = 0;
 var onlineMembers = [], onlineCount = 0;
@@ -926,6 +962,7 @@ gateRecovery.addEventListener('keydown', function(e){ if(e.key === 'Enter') gate
 
 function completeJoin(){
   joined = true;
+  loadDailyPulse();
   loadProfile();
   refreshAll();
   if(!onlineTimer) onlineTimer = setInterval(refreshOnline, 5000);
@@ -991,6 +1028,7 @@ function postCard(m){
     '<div class="post-who"><b data-author="' + esc(name) + '">' + esc(who) + '</b>' +
     '<span class="meta">Community · ' + esc(timeAgo(m.created_at)) + ' · ' + esc(fmtTime(m.created_at)) + '</span></div></div>' +
     '<p class="post-body"></p>' +
+    (m.photo_id ? '<div class="post-photo"><img loading="lazy" alt="Photo shared by ' + esc(name) + '" src="' + API + '/media/' + Number(m.photo_id) + '"></div>' : '') +
     '<div class="post-foot">' +
     '<button class="post-act like-btn' + (m.liked ? ' liked' : '') + '" data-act="like" type="button"></button>' +
     '<button class="post-act" data-act="comment" type="button"></button>' +
@@ -999,6 +1037,12 @@ function postCard(m){
     '</div>' +
     '<div class="comments" data-comments></div>';
   card.querySelector('.post-body').textContent = m.message || '';
+  if(!m.message) card.querySelector('.post-body').style.display = 'none';
+  var ph = card.querySelector('.post-photo img');
+  if(ph) ph.addEventListener('click', function(){
+    document.getElementById('photoLightboxImg').src = ph.src;
+    document.getElementById('photoLightbox').classList.add('show');
+  });
   card.querySelector('[data-act="like"]').textContent = likeLabel(m);
   card.querySelector('[data-act="comment"]').textContent = commentLabel(m);
   card.querySelectorAll('[data-author]').forEach(function(el){
@@ -1310,17 +1354,98 @@ document.getElementById('composerFakeInput').addEventListener('click', openCompo
 document.getElementById('heroCreateBtn').addEventListener('click', openComposer);
 document.getElementById('fabBtn').addEventListener('click', openComposer);
 composerCancelBtn.addEventListener('click', closeComposer);
-document.getElementById('composerPhotoBtn').addEventListener('click', function(){ comingSoon('Photo posts'); });
+/* ---------- photo posts ----------
+   Photos are downscaled in the browser before upload (same approach already
+   used for chat attachments): a phone camera JPEG is routinely 4-6MB against
+   a 2MB server cap, so without this every real photo would be rejected.
+   Uploaded with ?scope=post, which gives the file a 12h server TTL. */
+var pendingPostPhoto = null;
+
+function downscaleImage(file){
+  return new Promise(function(res, rej){
+    if(!/^image\//.test(file.type)) return res(file);
+    var img = new Image(), url = URL.createObjectURL(file);
+    img.onload = function(){
+      URL.revokeObjectURL(url);
+      var max = 1600, w = img.width, h = img.height;
+      if(w <= max && h <= max && file.size <= 1200000) return res(file);
+      var sc = Math.min(max / w, max / h, 1);
+      var c = document.createElement('canvas');
+      c.width = Math.round(w * sc); c.height = Math.round(h * sc);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob(function(b){
+        if(!b) return res(file);
+        res(new File([b], (file.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
+      }, 'image/jpeg', .82);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); rej(new Error('That image could not be read.')); };
+    img.src = url;
+  });
+}
+
+function clearPostPhoto(){
+  pendingPostPhoto = null;
+  var p = document.getElementById('composerPhotoPreview');
+  if(p){ p.style.display = 'none'; p.innerHTML = ''; }
+}
+
+function showPostPhoto(media){
+  var p = document.getElementById('composerPhotoPreview');
+  if(!p) return;
+  p.style.display = 'block';
+  p.innerHTML = '';
+  var img = document.createElement('img');
+  img.src = API + '/media/' + media.id;
+  img.alt = 'Photo attached to your post';
+  var x = document.createElement('button');
+  x.type = 'button'; x.className = 'photo-x'; x.textContent = '×';
+  x.setAttribute('aria-label', 'Remove photo');
+  x.addEventListener('click', clearPostPhoto);
+  p.appendChild(img); p.appendChild(x);
+}
+
+document.getElementById('composerPhotoBtn').addEventListener('click', function(){
+  if(!joined){ showGate(); return; }
+  document.getElementById('composerPhotoInput').click();
+});
+
+document.getElementById('composerPhotoInput').addEventListener('change', function(){
+  var f = this.files && this.files[0];
+  this.value = '';
+  if(!f) return;
+  if(!composerEditor.classList.contains('open')) openComposer();
+  var btn = document.getElementById('composerPhotoBtn');
+  var label = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ Preparing…';
+  downscaleImage(f).then(function(small){
+    btn.textContent = '⏳ Uploading…';
+    var fd = new FormData();
+    fd.append('file', small, small.name || 'photo.jpg');
+    return apiFetch('/media/upload?scope=post', { method: 'POST', formData: fd });
+  }).then(function(d){
+    if(!d || !d.ok || !d.media) throw new Error((d && d.error) || 'Upload failed.');
+    pendingPostPhoto = d.media;
+    showPostPhoto(d.media);
+    toast('Photo attached — it expires 12h after posting.');
+  }).catch(function(e){
+    toast(e.message || 'Could not attach that photo.');
+  }).finally(function(){
+    btn.disabled = false; btn.textContent = label;
+  });
+});
 document.getElementById('composerNoticeBtn').addEventListener('click', function(){ comingSoon('Posting community notices'); });
 
 composerPostBtn.addEventListener('click', function(){
   if(!joined){ showGate(); return; }
   if(!composerEditor.classList.contains('open')){ openComposer(); return; }
   var text = composerText.value.trim();
-  if(!text){ toast('Write something first.'); return; }
+  if(!text && !pendingPostPhoto){ toast('Write something or attach a photo first.'); return; }
   composerPostBtn.disabled = true;
-  apiFetch('/community', { method: 'POST', json: { message: text } }).then(function(sent){
+  var payload = { message: text };
+  if(pendingPostPhoto) payload.mediaId = pendingPostPhoto.id;
+  apiFetch('/community', { method: 'POST', json: payload }).then(function(sent){
     composerText.value = '';
+    clearPostPhoto();
     if(currentTab !== 'foryou') setTab('foryou');
     tabSig.foryou = '';
     if(sent && sent.message){
@@ -1352,7 +1477,33 @@ function setTab(tab){
 document.getElementById('tabForYou').addEventListener('click', function(){ setTab('foryou'); });
 document.getElementById('tabFollowing').addEventListener('click', function(){ setTab('following'); });
 document.getElementById('tabTrending').addEventListener('click', function(){ setTab('trending'); });
-document.getElementById('pulseCard').addEventListener('click', function(){ comingSoon('Daily Pulse'); });
+/* ---------- Daily Pulse ----------
+   One deterministic prompt per day from /api/pulse. Tapping "Answer"
+   opens the composer pre-filled so the reply lands in the normal feed
+   rather than needing its own storage. */
+var pulseToday = null;
+function loadDailyPulse(){
+  apiFetch('/pulse').then(function(p){
+    if(!p || !p.prompt) return;
+    pulseToday = p;
+    document.getElementById('pulseQuestion').textContent = p.prompt;
+    var d = document.getElementById('pulseDate');
+    if(d) d.textContent = 'A fresh community question every day.';
+  }).catch(function(){
+    document.getElementById('pulseQuestion').textContent =
+      'Today\u2019s question could not be loaded.';
+  });
+}
+document.getElementById('pulseAnswerBtn').addEventListener('click', function(e){
+  e.stopPropagation();
+  if(!joined){ showGate(); return; }
+  if(!pulseToday) return;
+  openComposer();
+  var ta = document.getElementById('composerText');
+  if(!ta.value.trim()) ta.value = '💓 ' + pulseToday.prompt + '\n\n';
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+});
 
 /* ---------- trending topics: ranked live from real #hashtags in the feed ---------- */
 function extractTags(text){

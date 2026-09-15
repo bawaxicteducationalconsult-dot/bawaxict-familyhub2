@@ -47,6 +47,11 @@
 .pav img{width:100%;height:100%;object-fit:cover;display:block}
 .pname{font-size:22px;font-weight:800;color:var(--fh-ink);margin:12px 0 4px;
   letter-spacing:-.3px;overflow-wrap:anywhere}
+.badge-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;
+  border-radius:var(--fh-pill);font-size:12.5px;font-weight:800;margin:2px 0 8px;
+  color:#fff}
+.badge-chip .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.85)}
+.badge-next{font-size:12px;color:var(--fh-muted);margin:0 0 6px;line-height:1.5}
 .pstate{display:inline-flex;align-items:center;gap:7px;font-size:13px;
   font-weight:700;color:var(--fh-muted)}
 .pstate .fh-dot{width:8px;height:8px}
@@ -123,6 +128,7 @@
       <div class="idbar">
         <div class="pav" id="pav">?</div>
         <h2 class="pname" id="pname">Loading…</h2>
+        <div id="badgeWrap"></div>
         <div class="pstate"><span class="fh-dot off" id="pdot"></span><span id="pstate">—</span></div>
 
         <div class="actions" id="actions"></div>
@@ -236,6 +242,7 @@ function load(){
     }
     following=!!p.following;
     renderActions();
+    renderBadge(p.badge);
 
     var rows='';
     function row(k,v){ if(v) rows+='<div><span>'+k+'</span><b>'+esc(v)+'</b></div>'; }
@@ -287,6 +294,25 @@ function load(){
         +'<a class="fh-btn fh-btn-sm" style="margin-top:10px" href="community-chat.html">Join the community</a></div>'
       : '<div class="fh-empty"><b>Could not load posts.</b></div>';
   });
+}
+
+
+/* Engagement badge. Tier is computed server-side from cumulative counters,
+   so it survives the 5-hour post sweep. */
+function renderBadge(b){
+  var w=$('badgeWrap'); if(!w) return;
+  if(!b){ w.innerHTML=''; return; }
+  var html='<span class="badge-chip" style="background:'+esc(b.color||'#98A2B3')+'">'
+    +'<span class="dot"></span>'+esc(b.label||'Novice')+'</span>';
+  if(b.next){
+    var need=[];
+    if(b.next.needContributions>0) need.push(b.next.needContributions+' more posts/comments');
+    if(b.next.needLikes>0) need.push(b.next.needLikes+' more likes');
+    if(b.next.needActiveDays>0) need.push(b.next.needActiveDays+' more active days');
+    if(need.length) html+='<div class="badge-next">'+(isMe?'You need ':'Needs ')
+      +esc(need.join(', '))+' to reach '+esc(b.next.label)+'.</div>';
+  }
+  w.innerHTML=html;
 }
 
 function loadOnline(){

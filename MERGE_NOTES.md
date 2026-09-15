@@ -1079,3 +1079,125 @@ how the two drift apart.
 earlier commit in this branch staged a stale `backend/forum.html` still
 containing the removed modal, which would have left LAN hotspot users on the
 old overlay while Pages users got the new page. Both now match `site/` exactly.
+
+---
+
+# ROUND 5 (branch `feature-round5`, from `35e06bc`)
+
+## Admin page — checked first, nothing duplicated
+`backend/admin/rewards.html` (27 KB) already exists with 14 `/api/admin/*`
+endpoints (rewards, notices, reports, flags, skills). Nothing here rebuilds any
+of it; the reward work extends the existing fulfilment flow.
+
+## R1. Photo posts — was unbuilt, not broken
+The button was one line wired to `comingSoon()`, `community` had no media
+column, and `POST /api/community` ignored attachments. Built end to end:
+`community.media_id`, `mediaId` accepted on post (caption optional when a photo
+is attached), `photo_id` exposed on the feed/following/profile reads resolved
+through `media` so an expired photo disappears rather than 404-ing.
+
+**Compression:** reuses the downscale approach already proven for chat uploads
+(max 1600px, JPEG q0.82). Without it a 4–6 MB phone photo is rejected outright
+by the 2 MB server cap.
+
+**12h auto-delete needed no new infrastructure.** `cleanup()` already runs on
+every request and deletes media past `expires_at`, file included; the upload
+just tags feed photos `kind='post_image'` with a 12h TTL via `?scope=post`.
+Two orphan rules added: a photo whose post was already swept at
+`PUBLIC_RETENTION` (5h) expires immediately instead of lingering, and a post
+pointing at deleted media has `media_id` cleared.
+
+## R2. Chat edit/delete
+Edit window **15 minutes**, enforced server-side. Delete is a **soft delete**
+(tombstone) — chosen because delivered/seen receipts, ordering and unread
+counts all depend on the row existing. Attachments on a deleted message expire
+immediately. Edits run through the same abuse filter as new messages, otherwise
+a clean message could be edited into an abusive one after delivery.
+
+## R3. Daily Pulse — 60-prompt rotating library
+`get_daily_prompt(day)` is the single swap point, as requested. `GET /api/pulse`
+is public and deterministic. Answer opens the composer pre-filled so replies
+land in the normal feed.
+
+## R4. Badges — thresholds RESOLVED (see R4b below)
+
+Built exactly to the specified ladder. But you asked to be told if the numbers
+look mismatched once I saw the data, and they do:
+
+**`PUBLIC_RETENTION` is 5 hours.** Posts are deleted after 5h and their likes
+and comments cascade — verified by sweeping a 6-hour-old post and watching the
+post, its like and its comment all disappear.
+
+Consequences:
+1. Rank **cannot** be computed from those tables, so it runs off new cumulative
+   counters on `users`, incremented on the action. A periodic sweep would have
+   nothing to count.
+2. **Everyone starts at Novice.** Historical activity is unrecoverable; the rows
+   are gone.
+3. **"50+ likes received" and "150+ posts" are hard to reach**, because a post
+   is only likeable for 5 hours. Pillar needs 150 contributions AND 50 likes AND
+   30 active days — on a small hotspot community that could take many months,
+   and Pillar may effectively be unreachable.
+
+Nothing was silently adjusted. Options if you want them softer: lower the like
+requirements (e.g. Trusted 5, Pillar 20), or raise `PUBLIC_RETENTION` so posts
+live long enough to accumulate likes. Say which and it is a one-line change.
+
+## R5. Free Data Rewards — what was and was not implemented
+
+| Piece | State |
+|---|---|
+| Automatic winning at each 5h tier | already worked |
+| Personal notice + public announcement | already worked |
+| Admin dashboard lists pending winners | already worked |
+| Voucher delivered in-app after admin pastes it | already worked |
+| **Voucher re-readable after the popup** | **was broken — fixed** |
+| Server mints MikroTik vouchers itself | **not implemented** |
+
+The real gap: `/api/rewards/mine` marked notices `delivered=1` on first read and
+only returned undelivered ones. The voucher code is inside that notice, so a
+winner who closed the modal or reloaded mid-popup lost it permanently.
+Reproduced, then fixed with a persistent `inbox` of the last 50 notices.
+
+`rewardAutoClaim: True` in `/api/health` was a hardcoded literal overstating the
+system. Winning is automatic; **fulfilment is manual** — an admin generates a
+real MikroTik voucher (per `backend/admin/README.txt`) and pastes it. Added
+`rewardAutoAward` / `rewardFulfilmentManual` and a note. Full automation would
+need RouterOS API access and credentials — flagged, not built.
+
+## Also noted, not changed
+`ADMIN_KEY_DEFAULT` is the **empty string**, so if `admin_key.txt` is missing
+the admin API accepts `key=""`. The server prints a warning on boot, but on the
+live VM this is worth confirming `admin_key.txt` exists.
+
+---
+
+## R4b. Badge thresholds — resolved
+
+Decision: keep `PUBLIC_RETENTION` at 5 hours (a deliberate storage decision)
+and lower the like requirements instead.
+
+| Tier | Contributions | Likes received | Active days |
+|---|---|---|---|
+| Novice | 0 | 0 | 0 |
+| Active | 10 | 0 | 3 |
+| Trusted | 50 | **5** (was 10) | 10 |
+| Pillar | 150 | **20** (was 50) | 30 |
+
+Reachability re-checked after the change, at 5 contributions per active day
+and roughly one like per post:
+
+| Tier | Time to reach | Binding gate |
+|---|---|---|
+| Active | 3 days | active days |
+| Trusted | 10 days | contributions |
+| Pillar | 30 days | contributions |
+
+**Likes are no longer the binding constraint at any tier.** Contributions and
+active days are, which is the intended design — active days is what prevents
+farming a tier in a single sitting. Under the old numbers the likes gate alone
+implied ~25 days for Pillar *on top of* the other requirements, on a feed where
+a post can only collect likes for 5 hours.
+
+Boundaries verified live: 50c/4l/10d = Active, 50c/5l/10d = Trusted,
+150c/19l/30d = Trusted, 150c/20l/30d = Pillar, 150c/20l/29d = Trusted.
