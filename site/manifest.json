@@ -1,0 +1,31 @@
+{
+  "background_color": "#0b2e23",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "BawaxConnecTHub",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "ConnecTHub",
+  "start_url": "/",
+  "theme_color": "#0b2e23",
+  "icons": [
+    {
+      "src": "https://bawaxict-familyhub2.pages.dev/favicon.ico",
+      "type": "image/x-icon",
+      "isSquare": false,
+      "isPng": false,
+      "isWebp": false,
+      "isJpg": false,
+      "width": 0,
+      "is512x512": false,
+      "is256x256": false,
+      "is192x192": false
+    }
+  ],
+  "description": "Community chat, marketplace and skills hub for BAWAXICT.",
+  "lang": "en",
+  "categories": [
+    "social",
+    "social networking"
+  ]
+}
